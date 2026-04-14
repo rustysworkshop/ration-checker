@@ -1,0 +1,2815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Least Cost Ration Formulator</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f5f4f0;--surface:#fff;--surface2:#f0ede6;--border:#d8d4cb;--border-strong:#b8b4aa;
+  --text:#1a1916;--text-muted:#6b6860;--text-faint:#9b9890;
+  --green:#2d6a4f;--green-bg:#d8f3dc;--red:#9b2226;--red-bg:#fde8e8;
+  --amber:#7d4e00;--amber-bg:#fff3cd;--blue:#1a4a7a;--blue-bg:#ddeeff;
+  --accent:#2a4d3a;--accent-light:#e8f0eb;
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh}
+
+/* ── Header ── */
+.header{background:var(--accent);color:#fff;padding:10px 14px;display:flex;flex-direction:column;gap:8px}
+.header-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.header h1{font-size:15px;font-weight:500;letter-spacing:0.02em}
+.header-sub{font-family:var(--mono);font-size:10px;opacity:0.5}
+.header-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.mode-toggle{display:flex;border:1px solid rgba(255,255,255,0.3);border-radius:4px;overflow:hidden}
+.mode-btn{padding:6px 12px;font-size:12px;font-weight:500;background:transparent;color:rgba(255,255,255,0.6);border:none;cursor:pointer;font-family:var(--sans);transition:all 0.15s;white-space:nowrap;min-height:36px}
+.mode-btn.active{background:rgba(255,255,255,0.2);color:#fff}
+
+/* ── Layout — mobile first, single column ── */
+.layout{display:flex;flex-direction:column}
+.sidebar{background:var(--surface);border-bottom:1px solid var(--border);padding:14px}
+.main{padding:14px;display:flex;flex-direction:column;gap:14px}
+
+/* Desktop: side by side */
+@media(min-width:900px){
+  .layout{display:grid;grid-template-columns:310px 1fr;min-height:calc(100vh - 80px)}
+  .sidebar{border-bottom:none;border-right:1px solid var(--border);overflow-y:auto;max-height:calc(100vh - 80px);display:flex;flex-direction:column;gap:12px}
+  .main{overflow-y:auto;max-height:calc(100vh - 80px)}
+  .header{flex-direction:row;align-items:center;padding:11px 18px}
+  .header-top{flex:1}
+  .header-actions{flex-shrink:0}
+  .output-grid{grid-template-columns:1fr 1fr}
+  .metrics{grid-template-columns:repeat(4,1fr)}
+}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:12px}
+.card:last-child{margin-bottom:0}
+.card-header{padding:8px 12px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-muted);display:flex;align-items:center;justify-content:space-between}
+.card-body{padding:12px}
+
+/* ── Forms ── */
+label{display:block;font-size:12px;color:var(--text-muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:0.05em}
+select,input[type="number"],input[type="text"]{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);font-family:var(--mono);font-size:14px;min-height:40px;-webkit-appearance:none;appearance:none}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b6860' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:30px}
+select:focus,input:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
+.field{margin-bottom:12px}.field:last-child{margin-bottom:0}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* ── Requirements grid ── */
+.req-grid{display:grid;grid-template-columns:1fr 64px 64px 64px;gap:4px 5px;align-items:center}
+.req-label{font-size:12px;color:var(--text-muted)}
+.col-head{font-size:11px;color:var(--text-faint);text-align:center;text-transform:uppercase;letter-spacing:0.05em;padding-bottom:3px}
+.req-grid input{font-size:14px;padding:7px 5px;min-height:38px;text-align:center}
+
+/* ── Tabs ── */
+.tab-bar{display:flex;border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tab{padding:10px 14px;font-size:13px;cursor:pointer;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-1px;background:none;border-left:none;border-right:none;border-top:none;font-family:var(--sans);white-space:nowrap;flex-shrink:0;min-height:40px}
+.tab.active{color:var(--text);border-bottom-color:var(--accent)}
+.tab-content{padding:12px}
+.hidden{display:none}
+
+/* ── Buttons ── */
+.btn-optimise{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:14px 16px;font-family:var(--sans);font-size:15px;font-weight:500;cursor:pointer;width:100%;letter-spacing:0.02em;transition:background 0.15s;min-height:48px;margin-top:4px}
+.btn-optimise:active{background:#1e3829}
+.btn-sm{padding:7px 11px;font-size:12px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text-muted);cursor:pointer;font-family:var(--sans);white-space:nowrap;min-height:34px}
+.btn-sm:active{background:var(--surface2);color:var(--text)}
+.btn-add{border-color:var(--accent);color:var(--accent)}
+.btn-save{border-color:var(--blue);color:var(--blue)}
+.btn-load{border-color:var(--amber);color:var(--amber)}
+.btn-default{border-color:#5a8a6a;color:#5a8a6a;font-weight:500}
+
+/* ── Ingredient table ── */
+.ing-wrap{overflow:auto;max-height:420px;-webkit-overflow-scrolling:touch}
+.ing-table{border-collapse:collapse;font-size:12px;min-width:max-content}
+.ing-table th{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-faint);padding:6px 6px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap;background:var(--surface2);position:sticky;top:0;z-index:3}
+.ing-table th.tl{text-align:left}
+.ing-table th.sticky-0{position:sticky;left:0;z-index:4;background:var(--surface2)}
+.ing-table th.sticky-1{position:sticky;left:32px;z-index:4;background:var(--surface2)}
+.ing-table th.sticky-2{position:sticky;left:222px;z-index:4;background:var(--surface2)}
+.ing-table th.sticky-3{position:sticky;left:292px;z-index:4;background:var(--surface2)}
+.ing-table th.sticky-4{position:sticky;left:362px;z-index:4;background:var(--surface2);border-right:2px solid var(--border-strong)}
+.ing-table td{padding:4px 5px;border-bottom:1px solid var(--border);vertical-align:middle;background:var(--surface)}
+.ing-table tbody tr:last-child td{border-bottom:none}
+.ing-table td.sticky-0{position:sticky;left:0;z-index:2;background:var(--surface)}
+.ing-table td.sticky-1{position:sticky;left:32px;z-index:2;background:var(--surface)}
+.ing-table td.sticky-2{position:sticky;left:222px;z-index:2;background:var(--surface)}
+.ing-table td.sticky-3{position:sticky;left:292px;z-index:2;background:var(--surface)}
+.ing-table td.sticky-4{position:sticky;left:362px;z-index:2;background:var(--surface);border-right:2px solid var(--border-strong)}
+.ing-table td input[type="number"]{width:58px;padding:4px 4px;font-size:12px;text-align:right;background:transparent;border:1px solid transparent;border-radius:2px;font-family:var(--mono);min-height:32px}
+.ing-table td input[type="number"]:focus{border-color:var(--accent);background:#fff;outline:none}
+.ing-table td input[type="text"]{width:180px;padding:4px 4px;font-size:12px;background:transparent;border:1px solid transparent;border-radius:2px;min-height:32px}
+.ing-table td input[type="text"]:focus{border-color:var(--accent);background:#fff;outline:none}
+.col-group-label{background:var(--surface2);font-size:9px;font-weight:500;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-faint);text-align:center;padding:4px 4px;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:3}
+
+.toggle{width:34px;height:20px;border-radius:10px;border:none;cursor:pointer;position:relative;transition:background 0.2s;display:block;flex-shrink:0}
+.toggle::after{content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:#fff;top:3px;transition:left 0.18s}
+.toggle.on{background:var(--green)}.toggle.on::after{left:17px}
+.toggle.off{background:var(--border-strong)}.toggle.off::after{left:3px}
+.del-btn{width:28px;height:28px;border-radius:4px;border:1px solid transparent;background:transparent;cursor:pointer;color:var(--text-faint);font-size:16px;display:flex;align-items:center;justify-content:center}
+.del-btn:active{border-color:var(--red-bg);background:var(--red-bg);color:var(--red)}
+
+/* ── Results ── */
+.metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.metric{background:var(--surface2);border-radius:5px;padding:10px 12px;border:1px solid var(--border)}
+.metric-label{font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:3px}
+.metric-val{font-family:var(--mono);font-size:20px;font-weight:500}
+.metric-unit{font-size:10px;color:var(--text-muted);margin-top:1px}
+.alert{padding:10px 12px;border-radius:4px;font-size:13px;margin-bottom:10px;line-height:1.5}
+.alert-ok{background:var(--green-bg);color:var(--green);border:1px solid #b7e4c7}
+.alert-fail{background:var(--red-bg);color:var(--red);border:1px solid #f5c2c7}
+.alert-warn{background:var(--amber-bg);color:var(--amber);border:1px solid #ffe082}
+.alert-info{background:var(--blue-bg);color:var(--blue);border:1px solid #b3d4f5}
+
+/* ── Output tables ── */
+.output-grid{display:grid;grid-template-columns:1fr;gap:12px;margin-top:12px}
+.out-table{width:100%;border-collapse:collapse;font-size:12px}
+.out-table th{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-faint);padding:5px 8px;border-bottom:1px solid var(--border);background:var(--surface2);text-align:right}
+.out-table th:first-child{text-align:left}
+.out-table th.center{text-align:center}
+.out-table td{padding:5px 8px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:12px;text-align:right}
+.out-table td:first-child{font-family:var(--sans);font-size:12px;color:var(--text-muted);text-align:left}
+.out-table td.unit{font-family:var(--sans);font-size:11px;color:var(--text-faint);text-align:center}
+.out-table tr:last-child td{border-bottom:none}
+.out-table td.ok{color:var(--green)}
+.out-table td.fail{color:var(--red)}
+.out-table td.warn{color:var(--amber)}
+.out-table td.na{color:var(--text-faint);font-family:var(--sans);font-size:11px}
+.out-table .section-head td{background:var(--surface2);font-family:var(--sans);font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-faint);padding:5px 8px;border-top:1px solid var(--border)}
+
+/* ── Inclusion table ── */
+.result-table{width:100%;border-collapse:collapse;font-size:12px}
+.result-table th{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-faint);padding:5px 8px;border-bottom:1px solid var(--border);background:var(--surface2);text-align:right}
+.result-table th:first-child{text-align:left}
+.result-table td{padding:5px 8px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:12px;text-align:right}
+.result-table td:first-child{font-family:var(--sans);text-align:left}
+.result-table tr.total-row td{font-weight:500;background:var(--surface2);border-top:1px solid var(--border-strong)}
+
+.badge{display:inline-block;padding:2px 6px;border-radius:3px;font-size:10px;font-weight:500;font-family:var(--mono)}
+.badge-ok{background:var(--green-bg);color:var(--green)}
+.badge-fail{background:var(--red-bg);color:var(--red)}
+.badge-warn{background:var(--amber-bg);color:var(--amber)}
+.badge-info{background:var(--blue-bg);color:var(--blue)}
+.badge-npn{background:var(--amber-bg);color:var(--amber);font-size:9px}
+input[type="file"]{display:none}
+.tfoot-note{font-size:11px;color:var(--text-faint);padding:6px 10px;border-top:1px solid var(--border);background:var(--surface2);line-height:1.4}
+.aa-note{font-size:11px;color:var(--text-faint);line-height:1.5;margin-bottom:8px}
+.sec-divider{font-size:10px;font-weight:500;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.08em;padding:6px 0 3px;margin-top:4px;border-top:1px solid var(--border)}
+.sec-divider:first-child{margin-top:0;border-top:none;padding-top:0}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div style="display:flex;align-items:baseline;gap:8px">
+      <h1>Rusty's Ration Checker</h1>
+      <span class="header-sub">v5</span>
+    </div>
+    <div class="mode-toggle">
+      <button class="mode-btn" id="mode-tmr" onclick="setMode('tmr')">$/head/day</button>
+      <button class="mode-btn active" id="mode-pellet" onclick="setMode('pellet')">$/tonne</button>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="btn-sm btn-default" onclick="saveAsDefault()">★ Save as default</button>
+  </div>
+</div>
+
+<div class="layout">
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+
+  <div class="card">
+    <div class="card-header">Animal class</div>
+    <div class="card-body">
+      <div class="row2">
+        <div class="field">
+          <label>Species</label>
+          <select id="species" onchange="updateDefaults()">
+            <option value="dairy">Dairy cow</option>
+            <option value="beef">Beef cattle</option>
+            <option value="sheep">Sheep / ewe</option>
+            <option value="goat">Goat</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Live weight (kg)</label>
+          <input type="number" id="liveweight" value="550">
+        </div>
+      </div>
+      <div class="field">
+        <label>Production stage</label>
+        <select id="stage" onchange="updateDefaults()">
+          <option value="maintenance">Maintenance</option>
+          <option value="early_lactation">Early lactation</option>
+          <option value="mid_lactation">Mid lactation</option>
+          <option value="late_pregnancy">Late pregnancy</option>
+          <option value="growing">Growing / finishing</option>
+        </select>
+      </div>
+      <div class="field" id="milk-yield-field" style="display:none">
+        <label>Milk yield (L/day)</label>
+        <input type="number" id="milk_yield" value="25" step="1" min="1" onchange="updateDefaults()">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="tab-bar">
+      <button class="tab active" onclick="switchTab('macro',this)">Macro</button>
+      <button class="tab" onclick="switchTab('aa',this)">Amino acids</button>
+      <button class="tab" onclick="switchTab('mineral',this)">Minerals</button>
+    </div>
+
+    <div id="req-macro" class="tab-content">
+      <div class="req-grid">
+        <div></div><div class="col-head">Min</div><div class="col-head">Target</div><div class="col-head">Max</div>
+        <div class="req-label">DM intake (kg)</div>
+        <input type="number" id="dm_min" step="0.1" value="15">
+        <input type="number" id="dm_tgt" step="0.1" value="0" placeholder="—">
+        <input type="number" id="dm_max" step="0.1" value="22">
+        <div class="req-label" id="me-label">ME (MJ/kg DM)</div>
+        <input type="number" id="me_min" step="0.1" value="11.5">
+        <input type="number" id="me_tgt" step="0.1" value="0" placeholder="—">
+        <input type="number" id="me_max" step="0.1" value="14.5">
+        <div class="req-label">CP (%DM)</div>
+        <input type="number" id="cp_min" step="0.1" value="14">
+        <input type="number" id="cp_tgt" step="0.1" value="0" placeholder="—">
+        <input type="number" id="cp_max" step="0.1" value="22">
+        <div class="req-label">NDF (%DM)</div>
+        <input type="number" id="ndf_min" step="0.1" value="28">
+        <input type="number" id="ndf_tgt" step="0.1" value="0" placeholder="—">
+        <input type="number" id="ndf_max" step="0.1" value="50">
+        <div class="req-label">ADF (%DM)</div>
+        <input type="number" id="adf_min" step="0.1" value="0">
+        <input type="number" id="adf_tgt" step="0.1" value="0" placeholder="—">
+        <input type="number" id="adf_max" step="0.1" value="99">
+        <div class="req-label">Starch (%DM)</div>
+        <input type="number" id="starch_min" step="0.1" value="0">
+        <input type="number" id="starch_tgt" step="0.1" value="0" placeholder="—">
+        <input type="number" id="starch_max" step="0.1" value="99">
+        <div class="req-label">Fat (%DM)</div>
+        <input type="number" id="fat_min" step="0.1" value="0">
+        <input type="number" id="fat_tgt" step="0.1" value="0" placeholder="—">
+        <input type="number" id="fat_max" step="0.1" value="8">
+        <div class="req-label">RDP (%DM)</div>
+        <input type="number" id="rdp_min" step="0.1" value="0">
+        <input type="number" id="rdp_tgt" step="0.1" value="0" placeholder="—">
+        <input type="number" id="rdp_max" step="0.1" value="99">
+        <div class="req-label">UDP (%DM)</div>
+        <input type="number" id="udp_min" step="0.1" value="0">
+        <input type="number" id="udp_tgt" step="0.1" value="0" placeholder="—">
+        <input type="number" id="udp_max" step="0.1" value="99">
+      </div>
+    </div>
+
+    <div id="req-aa" class="tab-content hidden">
+      <p class="aa-note">Expressed as % of CP. Set min to 0 to disable. His is first-limiting for dairy milk protein.</p>
+      <div class="req-grid">
+        <div></div><div class="col-head">Min</div><div class="col-head">Target</div><div class="col-head">Max</div>
+        <div class="req-label">Lysine (%CP)</div>
+        <input type="number" id="lys_min" step="0.1" value="6.5">
+        <input type="number" id="lys_tgt" step="0.1" value="0" placeholder="—">
+        <input type="number" id="lys_max" step="0.1" value="0" placeholder="—">
+        <div class="req-label">Methionine (%CP)</div>
+        <input type="number" id="met_min" step="0.1" value="1.8">
+        <input type="number" id="met_tgt" step="0.1" value="0" placeholder="—">
+        <input type="number" id="met_max" step="0.1" value="0" placeholder="—">
+        <div class="req-label">Threonine (%CP)</div>
+        <input type="number" id="thr_min" step="0.1" value="3.5">
+        <input type="number" id="thr_tgt" step="0.1" value="0" placeholder="—">
+        <input type="number" id="thr_max" step="0.1" value="0" placeholder="—">
+        <div class="req-label">Tryptophan (%CP)</div>
+        <input type="number" id="trp_min" step="0.1" value="1.1">
+        <input type="number" id="trp_tgt" step="0.1" value="0" placeholder="—">
+        <input type="number" id="trp_max" step="0.1" value="0" placeholder="—">
+        <div class="req-label">Histidine (%CP)</div>
+        <input type="number" id="his_min" step="0.1" value="2.0">
+        <input type="number" id="his_tgt" step="0.1" value="0" placeholder="—">
+        <input type="number" id="his_max" step="0.1" value="0" placeholder="—">
+      </div>
+    </div>
+
+    <div id="req-mineral" class="tab-content hidden">
+      <div class="req-grid">
+        <div></div><div class="col-head">Min</div><div class="col-head">Target</div><div class="col-head">Max</div>
+        <div class="req-label">Ca (%DM)</div>
+        <input type="number" id="ca_min" step="0.01" value="0.60">
+        <input type="number" id="ca_tgt" step="0.01" value="0" placeholder="—">
+        <input type="number" id="ca_max" step="0.01" value="99">
+        <div class="req-label">P (%DM)</div>
+        <input type="number" id="p_min" step="0.01" value="0.35">
+        <input type="number" id="p_tgt" step="0.01" value="0" placeholder="—">
+        <input type="number" id="p_max" step="0.01" value="99">
+        <div class="req-label">Mg (%DM)</div>
+        <input type="number" id="mg_min" step="0.01" value="0">
+        <input type="number" id="mg_tgt" step="0.01" value="0" placeholder="—">
+        <input type="number" id="mg_max" step="0.01" value="99">
+        <div class="req-label">Na (%DM)</div>
+        <input type="number" id="na_min" step="0.01" value="0">
+        <input type="number" id="na_tgt" step="0.01" value="0" placeholder="—">
+        <input type="number" id="na_max" step="0.01" value="99">
+        <div class="req-label">K (%DM)</div>
+        <input type="number" id="k_min" step="0.01" value="0">
+        <input type="number" id="k_tgt" step="0.01" value="0" placeholder="—">
+        <input type="number" id="k_max" step="0.01" value="99">
+        <div class="req-label">S (%DM)</div>
+        <input type="number" id="s_min" step="0.01" value="0">
+        <input type="number" id="s_tgt" step="0.01" value="0" placeholder="—">
+        <input type="number" id="s_max" step="0.01" value="99">
+      </div>
+    </div>
+  </div>
+
+  <button class="btn-optimise" onclick="optimise()">Optimise ration →</button>
+
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- Main tab bar -->
+  <div style="display:flex;border-bottom:2px solid var(--border);margin-bottom:14px;gap:0">
+    <button class="tab active" id="main-tab-ration" onclick="switchMainTab('ration',this)" style="font-size:13px;padding:10px 18px;font-weight:500">Ration analysis</button>
+    <button class="tab" id="main-tab-pellet" onclick="switchMainTab('pellet-form',this)" style="font-size:13px;padding:10px 18px;font-weight:500">Pellet formulator</button>
+  </div>
+
+  <!-- RATION TAB -->
+  <div id="main-ration-tab">
+
+  <!-- Analyse existing ration -->
+  <div class="card" id="analyse-card">
+    <div class="card-header">
+      Analyse existing ration
+      <button class="btn-sm" onclick="toggleAnalyse()" id="analyse-toggle-btn">+ Expand</button>
+    </div>
+    <div id="analyse-body" class="hidden">
+      <div style="padding:10px 12px">
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px;line-height:1.5">Enter kg as-fed per head per day for each ingredient to get the full nutrient profile of an existing ration — no optimisation, just analysis.</p>
+        <table class="result-table" style="margin-bottom:10px">
+          <thead>
+            <tr>
+              <th>Ingredient</th>
+              <th>kg as-fed<br>/head/day</th>
+              <th>kg DM<br>/head/day</th>
+            </tr>
+          </thead>
+          <tbody id="analyse-tbody"></tbody>
+        </table>
+        <button class="btn-optimise" style="background:var(--blue);margin-top:4px" onclick="analyseRation()">Analyse ration →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Analyse results -->
+  <div id="analyse-results" class="hidden">
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-label">Ration cost</div>
+        <div class="metric-val" id="am-cost">—</div>
+        <div class="metric-unit" id="am-cost-unit">$/tonne DM</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Total DM</div>
+        <div class="metric-val" id="am-dm">—</div>
+        <div class="metric-unit">kg / head / day</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">ME density</div>
+        <div class="metric-val" id="am-me">—</div>
+        <div class="metric-unit">MJ / kg DM</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">CP</div>
+        <div class="metric-val" id="am-cp">—</div>
+        <div class="metric-unit">% of DM</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:10px">
+      <div class="card-header">Existing ration — inclusion summary</div>
+      <div style="padding:10px 12px">
+        <table class="result-table">
+          <thead>
+            <tr>
+              <th>Ingredient</th>
+              <th>kg as-fed</th>
+              <th>kg DM</th>
+              <th>% of DM</th>
+              <th>$/t DM<br><span style="font-weight:400;font-size:9px">ingredient</span></th>
+              <th id="am-cost-col">Contribution</th>
+            </tr>
+          </thead>
+          <tbody id="analyse-ration-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="output-grid">
+      <div class="card">
+        <div class="card-header">Proximate &amp; energy</div>
+        <div style="padding:0"><table class="out-table" id="am-proximate"></table></div>
+      </div>
+      <div class="card">
+        <div class="card-header">Minerals &amp; protein fractions</div>
+        <div style="padding:0"><table class="out-table" id="am-minerals"></table></div>
+      </div>
+      <div class="card">
+        <div class="card-header">Amino acid profile</div>
+        <div style="padding:0"><table class="out-table" id="am-aa"></table></div>
+      </div>
+      <div class="card">
+        <div class="card-header">vs. requirements</div>
+        <div style="padding:0"><table class="out-table" id="am-constraints"></table></div>
+      </div>
+    </div>
+
+    <!-- Gap analysis / pellet spec -->
+    <div class="card" id="gap-card" style="margin-top:12px">
+      <div class="card-header">
+        Recommended supplementary pellet spec
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:10px;color:rgba(255,255,255,0.7)">Pellet kg DM/head/day:</span>
+          <input type="number" id="pellet-inclusion" value="2" step="0.1" min="0.1"
+            style="width:60px;padding:3px 6px;font-size:12px;border:1px solid rgba(255,255,255,0.3);border-radius:3px;background:rgba(255,255,255,0.15);color:#fff;font-family:var(--mono);text-align:center">
+        </div>
+      </div>
+      <div style="padding:10px 12px">
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px;line-height:1.5">
+          Based on the gap between your existing ration and targets. Shows what the pellet needs to contribute per kg DM to close each nutrient shortfall.
+        </p>
+        <table class="out-table" id="gap-table"></table>
+        <button class="btn-optimise" style="margin-top:12px;background:var(--blue)" onclick="loadGapIntoOptimiser()">
+          Load spec into optimiser →
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      Feed ingredients
+      <div style="display:flex;gap:5px">
+        <button class="btn-sm btn-save" onclick="saveLibrary()">↓ Save</button>
+        <button class="btn-sm btn-load" onclick="document.getElementById('file-input').click()">↑ Load</button>
+        <input type="file" id="file-input" accept=".json" onchange="loadLibrary(event)" style="display:none">
+        <button class="btn-sm btn-add" onclick="addIngredient()">+ Add row</button>
+        <button class="btn-sm btn-add" onclick="addUrea()">+ Urea</button>
+      </div>
+    </div>
+    <div class="ing-wrap">
+      <table class="ing-table" id="ing-table">
+        <thead>
+          <tr>
+            <!-- group label row -->
+            <th class="col-group-label sticky-0" style="text-align:center"></th>
+            <th class="col-group-label sticky-1" style="text-align:left;min-width:185px">Feed</th>
+            <th class="col-group-label sticky-2" style="text-align:right">Price</th>
+            <th class="col-group-label sticky-3" style="text-align:right">Min</th>
+            <th class="col-group-label sticky-4" style="text-align:right">Max</th>
+            <th class="col-group-label" colspan="6" style="border-left:2px solid var(--border-strong)">Core nutrients</th>
+            <th class="col-group-label" colspan="3" style="border-left:2px solid var(--border-strong)">Fibre</th>
+            <th class="col-group-label" colspan="2" style="border-left:2px solid var(--border-strong)">Protein fractions</th>
+            <th class="col-group-label" colspan="5" style="border-left:2px solid var(--border-strong)">Amino acids (%CP)</th>
+            <th class="col-group-label" colspan="6" style="border-left:2px solid var(--border-strong)">Minerals (%DM)</th>
+            <th class="col-group-label" colspan="6" style="border-left:2px solid var(--border-strong)">Trace minerals (mg/kg DM)</th>
+            <th class="col-group-label" colspan="1" style="border-left:2px solid var(--border-strong)">NPN</th>
+            <th class="col-group-label"></th>
+          </tr>
+          <tr>
+            <th class="tl sticky-0" style="width:28px"></th>
+            <th class="tl sticky-1">Name</th>
+            <th class="sticky-2">$/t<br>as-fed</th>
+            <th class="sticky-3">Min<br>kg DM</th>
+            <th class="sticky-4">Max<br>kg DM</th>
+            <th style="border-left:2px solid var(--border-strong)">DM%</th>
+            <th>ME<br>MJ/kg</th>
+            <th>CP%</th>
+            <th>Fat%</th>
+            <th>PUFA%<br><span style="font-weight:400">DM</span></th>
+            <th style="border-left:2px solid var(--border-strong)">NDF%</th>
+            <th>ADF%</th>
+            <th>Starch%</th>
+            <th style="border-left:2px solid var(--border-strong)">RDP%<br>DM</th>
+            <th>UDP%<br>DM</th>
+            <th style="border-left:2px solid var(--border-strong)">Lys</th>
+            <th>Met</th>
+            <th>Thr</th>
+            <th>Trp</th>
+            <th>His</th>
+            <th style="border-left:2px solid var(--border-strong)">Ca%</th>
+            <th>P%</th>
+            <th>Mg%</th>
+            <th>Na%</th>
+            <th>K%</th>
+            <th>S%</th>
+            <th style="border-left:2px solid var(--border-strong)">Co<br><span style="font-weight:400">mg/kg</span></th>
+            <th>Cu<br><span style="font-weight:400">mg/kg</span></th>
+            <th>Fe<br><span style="font-weight:400">mg/kg</span></th>
+            <th>Mn<br><span style="font-weight:400">mg/kg</span></th>
+            <th>Zn<br><span style="font-weight:400">mg/kg</span></th>
+            <th>Se<br><span style="font-weight:400">mg/kg</span></th>
+            <th style="border-left:2px solid var(--border-strong)">NPN</th>
+            <th style="width:20px"></th>
+          </tr>
+        </thead>
+        <tbody id="ing-tbody"></tbody>
+      </table>
+    </div>
+    <div class="tfoot-note">Click any cell to edit. Sticky columns: toggle + name. Scroll right for minerals and AA. RDP + UDP should sum to CP%.</div>
+  </div>
+
+  <div id="results-section" class="hidden">
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-label" id="cost-label">Ration cost</div>
+        <div class="metric-val" id="m-cost">—</div>
+        <div class="metric-unit" id="cost-unit">$/tonne DM pellet</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Total DM</div>
+        <div class="metric-val" id="m-dm">—</div>
+        <div class="metric-unit">kg / head / day</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">ME density</div>
+        <div class="metric-val" id="m-me">—</div>
+        <div class="metric-unit">MJ / kg DM</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">CP</div>
+        <div class="metric-val" id="m-cp">—</div>
+        <div class="metric-unit">% of DM</div>
+      </div>
+    </div>
+
+    <!-- Inclusion rates + NPN warning -->
+    <div class="card" style="margin-top:10px">
+      <div class="card-header">Optimised inclusion rates</div>
+      <div style="padding:10px 12px">
+        <div id="result-status"></div>
+        <div id="urea-block"></div>
+        <table class="result-table">
+          <thead>
+            <tr>
+              <th>Ingredient</th>
+              <th>kg DM/day</th>
+              <th>% of ration</th>
+              <th>$/t DM<br><span style="font-weight:400;font-size:9px">ingredient</span></th>
+              <th id="cost-col-head">Contribution</th>
+            </tr>
+          </thead>
+          <tbody id="ration-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- BESTMIX-style full output -->
+    <div class="output-grid">
+
+      <div class="card">
+        <div class="card-header">Ration composition — proximate &amp; energy</div>
+        <div style="padding:0">
+          <table class="out-table" id="out-proximate"></table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">Ration composition — minerals &amp; protein fractions</div>
+        <div style="padding:0">
+          <table class="out-table" id="out-minerals"></table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">Amino acid profile</div>
+        <div style="padding:0">
+          <table class="out-table" id="out-aa"></table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">Constraint check summary</div>
+        <div style="padding:0">
+          <table class="out-table" id="out-constraints"></table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Rerun button at bottom of results -->
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button class="btn-optimise" style="flex:1" onclick="optimise()">Rerun optimisation →</button>
+      <button class="btn-optimise" style="flex:0 0 auto;background:var(--text-muted);padding:14px 18px" onclick="document.querySelector('.ing-wrap').scrollIntoView({behavior:'smooth',block:'start'})">← Edit ingredients</button>
+    </div>
+
+  </div>
+
+  </div><!-- end main-ration-tab -->
+
+  <!-- PELLET FORMULATOR TAB -->
+  <div id="main-pellet-tab" class="hidden">
+
+    <!-- Pellet spec requirements -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header">
+        Pellet specification
+      </div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px;line-height:1.5">Set target pellet specifications. Load from gap analysis or enter manually. ME is MJ/kg DM.</p>
+        <div class="req-grid" style="grid-template-columns:1fr 64px 64px 64px">
+          <div></div><div class="col-head">Min</div><div class="col-head">Target</div><div class="col-head">Max</div>
+          <div class="req-label">DM (kg/hd/day)</div>
+          <input type="number" id="p_dm_min" step="0.1" value="4.0">
+          <input type="number" id="p_dm_tgt" step="0.1" value="4.5" placeholder="—">
+          <input type="number" id="p_dm_max" step="0.1" value="5.0">
+          <div class="req-label">ME (MJ/kg DM)</div>
+          <input type="number" id="p_me_min" step="0.1" value="11.0">
+          <input type="number" id="p_me_tgt" step="0.1" value="12.0" placeholder="—">
+          <input type="number" id="p_me_max" step="0.1" value="12.5">
+          <div class="req-label">CP (%DM)</div>
+          <input type="number" id="p_cp_min" step="0.1" value="16">
+          <input type="number" id="p_cp_tgt" step="0.1" value="18" placeholder="—">
+          <input type="number" id="p_cp_max" step="0.1" value="20">
+          <div class="req-label">NDF (%DM)</div>
+          <input type="number" id="p_ndf_min" step="0.1" value="0">
+          <input type="number" id="p_ndf_tgt" step="0.1" value="0" placeholder="—">
+          <input type="number" id="p_ndf_max" step="0.1" value="25">
+          <div class="req-label">Fat (%DM)</div>
+          <input type="number" id="p_fat_min" step="0.1" value="0">
+          <input type="number" id="p_fat_tgt" step="0.1" value="0" placeholder="—">
+          <input type="number" id="p_fat_max" step="0.1" value="8">
+          <div class="req-label">Starch (%DM)</div>
+          <input type="number" id="p_starch_min" step="0.1" value="0">
+          <input type="number" id="p_starch_tgt" step="0.1" value="0" placeholder="—">
+          <input type="number" id="p_starch_max" step="0.1" value="99">
+          <div class="req-label">Ca (%DM)</div>
+          <input type="number" id="p_ca_min" step="0.01" value="0.60">
+          <input type="number" id="p_ca_tgt" step="0.01" value="0.80" placeholder="—">
+          <input type="number" id="p_ca_max" step="0.01" value="99">
+          <div class="req-label">P (%DM)</div>
+          <input type="number" id="p_p_min" step="0.01" value="0.35">
+          <input type="number" id="p_p_tgt" step="0.01" value="0.45" placeholder="—">
+          <input type="number" id="p_p_max" step="0.01" value="99">
+          <div class="req-label">Lys (%CP)</div>
+          <input type="number" id="p_lys_min" step="0.1" value="5.0">
+          <input type="number" id="p_lys_tgt" step="0.1" value="0" placeholder="—">
+          <input type="number" id="p_lys_max" step="0.1" value="0" placeholder="—">
+          <div class="req-label">Met (%CP)</div>
+          <input type="number" id="p_met_min" step="0.1" value="1.8">
+          <input type="number" id="p_met_tgt" step="0.1" value="0" placeholder="—">
+          <input type="number" id="p_met_max" step="0.1" value="0" placeholder="—">
+        </div>
+      </div>
+    </div>
+
+    <!-- Pellet ingredient library -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header">
+        Pellet ingredients
+        <div style="display:flex;gap:5px">
+          <button class="btn-sm btn-save" onclick="savePelletLibrary()">↓ Save</button>
+          <button class="btn-sm btn-load" onclick="document.getElementById('pellet-file-input').click()">↑ Load</button>
+          <input type="file" id="pellet-file-input" accept=".json" onchange="loadPelletLibrary(event)" style="display:none">
+          <button class="btn-sm btn-add" onclick="addPelletIngredient()">+ Add row</button>
+          <button class="btn-sm btn-add" onclick="addPelletUrea()">+ Urea</button>
+        </div>
+      </div>
+      <div class="ing-wrap">
+        <table class="ing-table" id="pellet-ing-table">
+          <thead>
+            <tr>
+              <th class="col-group-label sticky-0"></th>
+              <th class="col-group-label sticky-1" style="text-align:left;min-width:185px">Feed</th>
+              <th class="col-group-label sticky-2" style="text-align:right">Price</th>
+              <th class="col-group-label sticky-3" style="text-align:right">Min</th>
+              <th class="col-group-label sticky-4" style="text-align:right">Max</th>
+              <th class="col-group-label" colspan="5" style="border-left:2px solid var(--border-strong)">Core nutrients</th>
+              <th class="col-group-label" colspan="3" style="border-left:2px solid var(--border-strong)">Fibre</th>
+              <th class="col-group-label" colspan="2" style="border-left:2px solid var(--border-strong)">Protein fractions</th>
+              <th class="col-group-label" colspan="5" style="border-left:2px solid var(--border-strong)">Amino acids (%CP)</th>
+              <th class="col-group-label" colspan="6" style="border-left:2px solid var(--border-strong)">Minerals (%DM)</th>
+              <th class="col-group-label" colspan="1" style="border-left:2px solid var(--border-strong)">NPN</th>
+              <th class="col-group-label"></th>
+            </tr>
+            <tr>
+              <th class="tl sticky-0" style="width:28px"></th>
+              <th class="tl sticky-1">Name</th>
+              <th class="sticky-2">$/t<br>as-fed</th>
+              <th class="sticky-3">Min<br>kg DM</th>
+              <th class="sticky-4">Max<br>kg DM</th>
+              <th style="border-left:2px solid var(--border-strong)">DM%</th><th>ME<br>MJ/kg</th><th>CP%</th><th>Fat%</th><th>PUFA%</th>
+              <th style="border-left:2px solid var(--border-strong)">NDF%</th><th>ADF%</th><th>Starch%</th>
+              <th style="border-left:2px solid var(--border-strong)">RDP%</th><th>UDP%</th>
+              <th style="border-left:2px solid var(--border-strong)">Lys</th><th>Met</th><th>Thr</th><th>Trp</th><th>His</th>
+              <th style="border-left:2px solid var(--border-strong)">Ca%</th><th>P%</th><th>Mg%</th><th>Na%</th><th>K%</th><th>S%</th>
+              <th style="border-left:2px solid var(--border-strong)">NPN</th>
+              <th style="width:20px"></th>
+            </tr>
+          </thead>
+          <tbody id="pellet-ing-tbody"></tbody>
+        </table>
+      </div>
+      <div class="tfoot-note">Feedmill ingredient library. Click any cell to edit. Scroll right for minerals and AA.</div>
+    </div>
+
+    <!-- Pellet optimise button -->
+    <button class="btn-optimise" onclick="optimisePellet()">Optimise pellet →</button>
+
+    <!-- Pellet results -->
+    <div id="pellet-results" class="hidden" style="margin-top:14px">
+
+      <div class="metrics">
+        <div class="metric">
+          <div class="metric-label">Pellet cost</div>
+          <div class="metric-val" id="pm-cost">—</div>
+          <div class="metric-unit">$/tonne DM</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Total DM</div>
+          <div class="metric-val" id="pm-dm">—</div>
+          <div class="metric-unit">kg / head / day</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">ME density</div>
+          <div class="metric-val" id="pm-me">—</div>
+          <div class="metric-unit">MJ / kg DM</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">CP</div>
+          <div class="metric-val" id="pm-cp">—</div>
+          <div class="metric-unit">% of DM</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:10px">
+        <div class="card-header">Optimised pellet inclusion rates</div>
+        <div style="padding:10px 12px">
+          <div id="pellet-result-status"></div>
+          <div id="pellet-npn-block"></div>
+          <div id="pellet-pufa-block"></div>
+          <table class="result-table">
+            <thead>
+              <tr>
+                <th>Ingredient</th>
+                <th>kg DM/day</th>
+                <th>% of pellet</th>
+                <th>$/t DM ingredient</th>
+                <th>$/t DM contrib.</th>
+              </tr>
+            </thead>
+            <tbody id="pellet-ration-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="output-grid" style="margin-top:10px">
+        <div class="card">
+          <div class="card-header">Proximate &amp; energy</div>
+          <div style="padding:0"><table class="out-table" id="pellet-out-proximate"></table></div>
+        </div>
+        <div class="card">
+          <div class="card-header">Minerals &amp; protein fractions</div>
+          <div style="padding:0"><table class="out-table" id="pellet-out-minerals"></table></div>
+        </div>
+        <div class="card">
+          <div class="card-header">Amino acid profile</div>
+          <div style="padding:0"><table class="out-table" id="pellet-out-aa"></table></div>
+        </div>
+        <div class="card">
+          <div class="card-header">Constraint check</div>
+          <div style="padding:0"><table class="out-table" id="pellet-out-constraints"></table></div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:14px">
+        <button class="btn-optimise" style="flex:1" onclick="optimisePellet()">Rerun →</button>
+      </div>
+    </div>
+
+  </div><!-- end main-pellet-tab -->
+
+</div><!-- end main -->
+</div><!-- end layout -->
+
+<script>
+let currentMode = 'pellet';
+
+/*INGREDIENTS_START*/
+let ingredients = [
+  {id:1,  name:"Oaten hay",        cost:320, dm:88, me:8.5,  cp:7.5,  fat:1.5, pufa:0.5, ndf:65, adf:38, starch:2,  rdp:5.5, udp:2.0, lys:3.2, met:1.5, thr:3.0, trp:1.0, his:1.8, ca:0.25, p:0.18, mg:0.12, na:0.05, k:1.80, s:0.12, co:0.06, cu:3.5,  fe:120, mn:45,  zn:18,  se:0.05, npn:false, minInc:0, maxInc:99, active:true},
+  {id:2,  name:"Lucerne hay",      cost:480, dm:90, me:10.2, cp:18.0, fat:2.2, pufa:0.6, ndf:42, adf:30, starch:2,  rdp:12.0,udp:6.0, lys:5.2, met:1.6, thr:3.8, trp:1.2, his:2.2, ca:1.50, p:0.28, mg:0.30, na:0.08, k:2.50, s:0.25, co:0.12, cu:8.0,  fe:180, mn:30,  zn:22,  se:0.08, npn:false, minInc:0, maxInc:10, active:true},
+  {id:3,  name:"Wheaten hay",      cost:280, dm:88, me:8.2,  cp:6.5,  fat:1.3, pufa:0.4, ndf:70, adf:42, starch:2,  rdp:4.8, udp:1.7, lys:2.8, met:1.4, thr:2.8, trp:1.0, his:1.6, ca:0.20, p:0.17, mg:0.10, na:0.04, k:1.70, s:0.10, co:0.05, cu:3.0,  fe:110, mn:38,  zn:16,  se:0.04, npn:false, minInc:0, maxInc:99, active:true},
+  {id:4,  name:"Barley grain",     cost:390, dm:88, me:13.0, cp:11.5, fat:2.0, pufa:0.8, ndf:18, adf:7,  starch:55, rdp:7.8, udp:3.7, lys:3.5, met:1.7, thr:3.2, trp:1.2, his:2.3, ca:0.06, p:0.40, mg:0.12, na:0.02, k:0.55, s:0.16, co:0.04, cu:5.5,  fe:55,  mn:16,  zn:35,  se:0.08, npn:false, minInc:0, maxInc:6,  active:true},
+  {id:5,  name:"Canola meal",      cost:520, dm:88, me:12.5, cp:38.0, fat:3.5, pufa:3.2, ndf:28, adf:18, starch:3,  rdp:22.0,udp:16.0,lys:5.9, met:1.9, thr:4.3, trp:1.3, his:2.8, ca:0.72, p:1.10, mg:0.55, na:0.10, k:1.40, s:0.68, co:0.05, cu:4.0,  fe:150, mn:50,  zn:60,  se:0.20, npn:false, minInc:0, maxInc:4,  active:true},
+  {id:6,  name:"Cottonseed whole", cost:450, dm:92, me:14.5, cp:23.0, fat:18.0, pufa:5.8,ndf:45, adf:32, starch:1,  rdp:13.0,udp:10.0,lys:3.6, met:1.5, thr:3.0, trp:1.1, his:2.5, ca:0.18, p:0.55, mg:0.35, na:0.04, k:1.15, s:0.30, co:0.06, cu:12.0, fe:100, mn:20,  zn:45,  se:0.10, npn:false, minInc:0, maxInc:3,  active:true},
+  {id:7,  name:"Maize silage",     cost:160, dm:32, me:10.8, cp:8.5,  fat:3.2, pufa:0.8, ndf:44, adf:26, starch:28, rdp:6.0, udp:2.5, lys:2.5, met:1.8, thr:3.5, trp:0.6, his:2.8, ca:0.22, p:0.22, mg:0.18, na:0.02, k:1.20, s:0.12, co:0.04, cu:3.0,  fe:90,  mn:25,  zn:20,  se:0.04, npn:false, minInc:0, maxInc:12, active:true},
+  {id:8,  name:"Sorghum grain",    cost:360, dm:88, me:13.2, cp:10.5, fat:3.3, pufa:1.6, ndf:16, adf:8,  starch:65, rdp:6.5, udp:4.0, lys:2.2, met:1.5, thr:3.0, trp:0.9, his:2.1, ca:0.04, p:0.35, mg:0.14, na:0.01, k:0.40, s:0.12, co:0.04, cu:4.5,  fe:48,  mn:14,  zn:18,  se:0.06, npn:false, minInc:0, maxInc:5,  active:false},
+  {id:9,  name:"Wheat bran",       cost:300, dm:88, me:10.0, cp:15.5, fat:4.2, pufa:2.2, ndf:38, adf:13, starch:20, rdp:10.0,udp:5.5, lys:3.9, met:1.6, thr:3.3, trp:1.2, his:2.4, ca:0.14, p:1.15, mg:0.55, na:0.02, k:1.20, s:0.22, co:0.05, cu:12.0, fe:110, mn:120, zn:90,  se:0.12, npn:false, minInc:0, maxInc:3,  active:true},
+  {id:10, name:"Distillers grain", cost:410, dm:88, me:13.8, cp:29.5, fat:10.0, pufa:4.2,ndf:35, adf:18, starch:5,  rdp:14.0,udp:15.5,lys:3.0, met:1.8, thr:3.6, trp:0.7, his:2.6, ca:0.22, p:0.75, mg:0.30, na:0.15, k:0.80, s:0.40, co:0.05, cu:6.0,  fe:130, mn:18,  zn:70,  se:0.35, npn:false, minInc:0, maxInc:4,  active:false},
+  {id:11, name:"Lupins (sweet)",   cost:440, dm:88, me:13.5, cp:31.0, fat:5.5, pufa:1.8, ndf:20, adf:14, starch:4,  rdp:20.0,udp:11.0,lys:5.1, met:0.7, thr:3.5, trp:0.9, his:2.6, ca:0.25, p:0.38, mg:0.12, na:0.06, k:0.90, s:0.22, co:0.06, cu:7.0,  fe:80,  mn:30,  zn:35,  se:0.10, npn:false, minInc:0, maxInc:5,  active:false},
+
+  {id:13, name:"Urea",             cost:900, dm:99, me:0,    cp:281,  fat:0, pufa:0.0,   ndf:0,  adf:0,  starch:0,  rdp:281, udp:0,   lys:0,   met:0,   thr:0,   trp:0,   his:0,   ca:0,    p:0,    mg:0,    na:0,    k:0,    s:0,    co:0,    cu:0,    fe:0,   mn:0,   zn:0,   se:0,    npn:true,  minInc:0, maxInc:0.3, active:false},
+  {id:14, name:"ASW wheat",        cost:370, dm:88, me:13.2, cp:11.5, fat:1.8, pufa:0.9, ndf:12, adf:4,  starch:62, rdp:7.5, udp:4.0, lys:2.8, met:1.6, thr:2.9, trp:1.1, his:2.2, ca:0.05, p:0.38, mg:0.11, na:0.01, k:0.45, s:0.14, co:0.04, cu:4.5,  fe:45,  mn:30,  zn:30,  se:0.07, npn:false, minInc:0, maxInc:99, active:false},
+  {id:15, name:"F1 barley",        cost:340, dm:88, me:12.8, cp:11.0, fat:1.9, pufa:0.8, ndf:18, adf:7,  starch:52, rdp:7.2, udp:3.8, lys:3.4, met:1.7, thr:3.1, trp:1.2, his:2.2, ca:0.06, p:0.38, mg:0.12, na:0.02, k:0.52, s:0.15, co:0.04, cu:5.0,  fe:50,  mn:15,  zn:33,  se:0.07, npn:false, minInc:0, maxInc:99, active:false},
+  {id:16, name:"Maize grain",      cost:400, dm:88, me:14.0, cp:9.0,  fat:4.0, pufa:2.8, ndf:10, adf:4,  starch:68, rdp:5.5, udp:3.5, lys:2.5, met:1.9, thr:3.3, trp:0.6, his:2.7, ca:0.03, p:0.30, mg:0.12, na:0.01, k:0.38, s:0.10, co:0.03, cu:2.0,  fe:30,  mn:5,   zn:20,  se:0.04, npn:false, minInc:0, maxInc:99, active:false},
+  {id:17, name:"Faba beans",         cost:420, dm:87, me:12.8, cp:27.0, fat:1.4, pufa:0.4, ndf:14, adf:9,  starch:40, rdp:18.5,udp:8.5, lys:6.2, met:0.8, thr:3.4, trp:0.9, his:2.7, ca:0.12, p:0.48, mg:0.12, na:0.04, k:1.05, s:0.20, co:0.06, cu:6.0,  fe:70,  mn:20,  zn:35,  se:0.10, npn:false, minInc:0, maxInc:99, active:false},
+
+  // Ryegrass — three quality states (Dairy Australia / CSIRO typical values)
+  // Fresh/lush: high ME, high CP, low fibre — early vegetative, irrigated or spring flush
+  // DM ~15%, ME~11.5, CP~24%, NDF~42%, sugar~14%, starch~3%
+  {id:18, name:"Ryegrass (fresh/lush)", cost:0, dm:15, me:11.5, cp:24.0, fat:3.5, pufa:2.6, ndf:42, adf:24, starch:3,  rdp:18.0,udp:6.0, lys:5.0, met:1.8, thr:3.8, trp:1.1, his:2.2, ca:0.50, p:0.40, mg:0.22, na:0.18, k:3.20, s:0.28, co:0.12, cu:8.0,  fe:180, mn:80,  zn:25,  se:0.05, npn:false, minInc:0, maxInc:99, active:false},
+
+  // Typical/fresh: well-managed perennial ryegrass, summer/autumn, moderate quality
+  // DM ~18%, ME~10.5, CP~18%, NDF~50%
+  {id:19, name:"Ryegrass (typical)",   cost:0, dm:18, me:10.5, cp:18.0, fat:3.0, pufa:2.2, ndf:50, adf:28, starch:3,  rdp:13.5,udp:4.5, lys:4.2, met:1.6, thr:3.4, trp:1.0, his:2.0, ca:0.45, p:0.35, mg:0.20, na:0.15, k:2.80, s:0.24, co:0.10, cu:7.0,  fe:160, mn:70,  zn:22,  se:0.04, npn:false, minInc:0, maxInc:99, active:false},
+
+  // Stale/mature: stemmy, heading out or drought-affected, high fibre, low ME
+  // DM ~25%, ME~8.5, CP~10%, NDF~65%
+  {id:20, name:"Ryegrass (stale)",     cost:0, dm:25, me:8.5,  cp:10.0, fat:2.0, pufa:1.3, ndf:65, adf:38, starch:2,  rdp:7.5, udp:2.5, lys:2.8, met:1.3, thr:2.8, trp:0.8, his:1.6, ca:0.35, p:0.28, mg:0.18, na:0.10, k:2.20, s:0.18, co:0.08, cu:5.0,  fe:130, mn:55,  zn:18,  se:0.03, npn:false, minInc:0, maxInc:99, active:false},
+
+  // High-fat ryegrass — worst case for PUFA load and milk fat depression risk
+  // Spring flush / post-rain / heavily N-fertilised: DM ~12%, fat up to 5% DM
+  // PUFA ~78% of lipid (predominantly C18:3 α-linolenic). High K (DCAD risk).
+  // Use this to stress-test PUFA traffic light and check MFD risk in gap analysis.
+  {id:21, name:"Ryegrass (high fat)",  cost:0, dm:12, me:11.8, cp:26.0, fat:5.0, pufa:3.9, ndf:38, adf:21, starch:3,  rdp:19.5,udp:6.5, lys:5.2, met:1.9, thr:4.0, trp:1.2, his:2.3, ca:0.55, p:0.42, mg:0.24, na:0.20, k:3.80, s:0.30, co:0.14, cu:9.0,  fe:200, mn:90,  zn:28,  se:0.06, npn:false, minInc:0, maxInc:99, active:false},
+];
+let nextId = 22;
+/*INGREDIENTS_END*/
+
+// ── Pellet ingredient library ──
+/*PELLET_INGREDIENTS_START*/
+let pelletIngredients = [
+  // ── GRAINS ──
+  {id:1,  name:"Wheat",               cost:350,  dm:88, me:13.2, cp:12.0, fat:1.8, pufa:0.9, ndf:13,  adf:4,  starch:65, rdp:7.5, udp:4.5, lys:2.8,met:1.7,thr:2.9,trp:1.1,his:2.2, ca:0.05,p:0.38,mg:0.11,na:0.01,k:0.45,s:0.14, co:0.04, cu:4.5,  fe:45,   mn:30,   zn:30,   se:0.07,   npn:false, minInc:0, maxInc:99, active:true},
+  {id:2,  name:"Barley (F1)",         cost:330,  dm:88, me:12.8, cp:11.0, fat:1.9, pufa:0.8, ndf:18,  adf:7,  starch:52, rdp:7.2, udp:3.8, lys:3.4,met:1.7,thr:3.1,trp:1.2,his:2.2, ca:0.06,p:0.38,mg:0.12,na:0.02,k:0.52,s:0.15, co:0.04, cu:5.0,  fe:50,   mn:15,   zn:33,   se:0.07,   npn:false, minInc:0, maxInc:99, active:true},
+  {id:3,  name:"Maize",               cost:0,    dm:88, me:14.0, cp:9.0,  fat:4.0, pufa:2.8, ndf:10,  adf:4,  starch:68, rdp:5.5, udp:3.5, lys:2.5,met:1.9,thr:3.3,trp:0.6,his:2.7, ca:0.03,p:0.30,mg:0.12,na:0.01,k:0.38,s:0.10, co:0.03, cu:2.0,  fe:30,   mn:5,   zn:20,   se:0.04,   npn:false, minInc:0, maxInc:99, active:false},
+  {id:4,  name:"Sorghum",             cost:0,    dm:88, me:13.2, cp:10.5, fat:3.3, pufa:1.6, ndf:16,  adf:8,  starch:65, rdp:6.5, udp:4.0, lys:2.2,met:1.5,thr:3.0,trp:0.9,his:2.1, ca:0.04,p:0.35,mg:0.14,na:0.01,k:0.40,s:0.12, co:0.04, cu:4.5,  fe:48,   mn:14,   zn:18,   se:0.06,   npn:false, minInc:0, maxInc:99, active:false},
+  // ── PROTEIN MEALS ──
+  {id:5,  name:"Canola meal (max 60%)",cost:510, dm:88, me:12.5, cp:38.0, fat:3.5, pufa:3.2, ndf:28,  adf:18, starch:3,  rdp:22.0,udp:16.0,lys:5.9,met:1.9,thr:4.3,trp:1.3,his:2.8, ca:0.72,p:1.10,mg:0.55,na:0.10,k:1.40,s:0.68, co:0.05, cu:4.0,  fe:150,   mn:50,   zn:60,   se:0.2,   npn:false, minInc:0, maxInc:60, active:true},
+  {id:6,  name:"Soybean meal (max 40%)",cost:800,dm:88, me:13.5, cp:46.0, fat:2.0, pufa:1.5, ndf:12,  adf:7,  starch:2,  rdp:28.0,udp:18.0,lys:6.5,met:1.4,thr:4.0,trp:1.4,his:2.8, ca:0.35,p:0.68,mg:0.30,na:0.05,k:2.00,s:0.35, co:0.12, cu:15.0,  fe:120,   mn:30,   zn:45,   se:0.1,   npn:false, minInc:0, maxInc:40, active:true},
+  // Full fat soy — higher fat and energy, lower CP than extracted meal
+  {id:7,  name:"Soybean meal full fat",cost:1610, dm:88, me:15.5, cp:36.0, fat:18.0,pufa:8.0, ndf:12,  adf:7,  starch:2,  rdp:22.0,udp:14.0,lys:5.8,met:1.3,thr:3.8,trp:1.3,his:2.6, ca:0.30,p:0.60,mg:0.28,na:0.05,k:1.80,s:0.32, co:0.12, cu:15.0,  fe:120,   mn:30,   zn:45,   se:0.1,   npn:false, minInc:0, maxInc:99, active:false},
+  // Peas/Lentils
+  {id:8,  name:"Peas / Lentils",      cost:470,  dm:88, me:13.0, cp:24.0, fat:1.5, pufa:0.5, ndf:15,  adf:8,  starch:44, rdp:16.0,udp:8.0, lys:6.0,met:0.9,thr:3.5,trp:0.9,his:2.5, ca:0.12,p:0.42,mg:0.14,na:0.04,k:1.00,s:0.22, co:0.08, cu:6.0,  fe:70,   mn:20,   zn:35,   se:0.1,   npn:false, minInc:0, maxInc:99, active:true},
+  // Lucerne meal — good protein, moderate energy, high Ca
+  {id:9,  name:"Lucerne meal",        cost:760,  dm:90, me:9.5,  cp:18.0, fat:2.0, pufa:0.5, ndf:42,  adf:30, starch:2,  rdp:12.0,udp:6.0, lys:5.2,met:1.6,thr:3.8,trp:1.2,his:2.2, ca:1.50,p:0.28,mg:0.30,na:0.08,k:2.50,s:0.25, co:0.12, cu:8.0,  fe:180,   mn:30,   zn:22,   se:0.08,   npn:false, minInc:0, maxInc:99, active:false},
+  // Prosin (SCP — single cell protein from fermentation, limited by nucleic acid ~10% max)
+  {id:10, name:"Prosin L (SCP)",      cost:1210, dm:92, me:13.5, cp:62.0, fat:5.0, pufa:2.0, ndf:5,   adf:2,  starch:0,  rdp:45.0,udp:17.0,lys:7.5,met:2.0,thr:5.0,trp:1.8,his:3.2, ca:0.20,p:1.80,mg:0.20,na:0.50,k:1.50,s:0.40, co:0.15, cu:10.0,  fe:200,   mn:50,   zn:80,   se:0.15,   npn:false, minInc:0, maxInc:5,  active:false},
+  // Skim milk powder — highly digestible, high CP, lactose energy source
+  {id:11, name:"Skim milk powder",    cost:3080, dm:97, me:15.0, cp:35.0, fat:1.0, pufa:0.1, ndf:0,   adf:0,  starch:0,  rdp:18.0,udp:17.0,lys:8.5,met:2.8,thr:4.5,trp:1.4,his:3.2, ca:1.30,p:1.05,mg:0.12,na:0.55,k:1.65,s:0.32, co:0.02, cu:0.5,  fe:3,   mn:3,   zn:40,   se:0.12,   npn:false, minInc:0, maxInc:10, active:false},
+  // ── MILLING BY-PRODUCTS ──
+  {id:12, name:"Mill run (pollard)",  cost:340,  dm:88, me:10.0, cp:15.5, fat:4.2, pufa:2.2, ndf:38,  adf:13, starch:20, rdp:10.0,udp:5.5, lys:3.9,met:1.6,thr:3.3,trp:1.2,his:2.4, ca:0.14,p:1.15,mg:0.55,na:0.02,k:1.20,s:0.22, co:0.05, cu:12.0,  fe:110,   mn:120,   zn:90,   se:0.12,   npn:false, minInc:0, maxInc:99, active:true},
+  {id:13, name:"Oat offal (max 10%)", cost:240,  dm:89, me:8.5,  cp:10.0, fat:2.5, pufa:1.2, ndf:55,  adf:30, starch:8,  rdp:6.5, udp:3.5, lys:3.0,met:1.4,thr:2.8,trp:0.9,his:1.8, ca:0.10,p:0.28,mg:0.18,na:0.03,k:0.60,s:0.18, co:0.05, cu:4.0,  fe:80,   mn:40,   zn:25,   se:0.08,   npn:false, minInc:0, maxInc:10, active:true},
+  {id:14, name:"Pea pollard",         cost:0,    dm:88, me:11.0, cp:18.0, fat:2.5, pufa:0.8, ndf:35,  adf:16, starch:15, rdp:12.0,udp:6.0, lys:5.5,met:0.9,thr:3.5,trp:0.8,his:2.4, ca:0.18,p:0.55,mg:0.20,na:0.04,k:1.00,s:0.22, co:0.06, cu:5.0,  fe:60,   mn:20,   zn:30,   se:0.08,   npn:false, minInc:0, maxInc:99, active:false},
+  {id:15, name:"Almond hulls",        cost:0,    dm:88, me:8.8,  cp:5.0,  fat:2.8, pufa:1.0, ndf:28,  adf:18, starch:2,  rdp:3.5, udp:1.5, lys:1.2,met:0.6,thr:1.5,trp:0.5,his:1.0, ca:0.22,p:0.12,mg:0.12,na:0.03,k:1.20,s:0.10, co:0.03, cu:3.0,  fe:60,   mn:20,   zn:15,   se:0.04,   npn:false, minInc:0, maxInc:10, active:false},
+  // ── LIQUIDS / ENERGY ──
+  {id:16, name:"Molasses",            cost:500,  dm:75, me:12.5, cp:3.5,  fat:0.1, pufa:0.0, ndf:0,   adf:0,  starch:0,  rdp:3.0, udp:0.5, lys:0.3,met:0.2,thr:0.3,trp:0.1,his:0.2, ca:0.90,p:0.10,mg:0.35,na:0.30,k:4.50,s:0.45, co:0.05, cu:3.0,  fe:100,   mn:25,   zn:10,   se:0.02,   npn:false, minInc:0, maxInc:4,  active:false},
+  {id:17, name:"Canola oil",          cost:2670, dm:99, me:35.0, cp:0.0,  fat:99.0,pufa:32.0,ndf:0,   adf:0,  starch:0,  rdp:0,   udp:0,   lys:0,  met:0,  thr:0,  trp:0,  his:0,  ca:0,   p:0,   mg:0,   na:0,   k:0,   s:0,   co:0, cu:0,  fe:0,   mn:0,   zn:0,   se:0,   npn:false, minInc:0, maxInc:3,  active:false},
+  // Sugar (sucrose) — energy, palatability, binder
+  {id:18, name:"Sugar",               cost:1970, dm:99, me:15.0, cp:0.0,  fat:0.0, pufa:0.0, ndf:0,   adf:0,  starch:0,  rdp:0,   udp:0,   lys:0,  met:0,  thr:0,  trp:0,  his:0,  ca:0,   p:0,   mg:0,   na:0,   k:0,   s:0,   co:0, cu:0.1,  fe:1,   mn:1,   zn:0,   se:0,   npn:false, minInc:0, maxInc:5,  active:false},
+  // ── MINERALS ──
+  {id:19, name:"Limestone (99% Ca)",  cost:145,  dm:99, me:0.0,  cp:0.0,  fat:0.0, pufa:0.0, ndf:0,   adf:0,  starch:0,  rdp:0,   udp:0,   lys:0,  met:0,  thr:0,  trp:0,  his:0,  ca:38.0,p:0,   mg:1.2, na:0,   k:0,   s:0,   co:0, cu:0.5,  fe:400,   mn:10,   zn:10,   se:0.02,   npn:false, minInc:0, maxInc:3,  active:true},
+  // Calcimate — feed-grade calcium carbonate (granular, Ca ~38%)
+  {id:20, name:"Calcimate",           cost:390,  dm:99, me:0.0,  cp:0.0,  fat:0.0, pufa:0.0, ndf:0,   adf:0,  starch:0,  rdp:0,   udp:0,   lys:0,  met:0,  thr:0,  trp:0,  his:0,  ca:38.0,p:0,   mg:1.0, na:0,   k:0,   s:0,   co:0, cu:0.5,  fe:400,   mn:10,   zn:10,   se:0.02,   npn:false, minInc:0, maxInc:3,  active:false},
+  // Calgrit — coarse limestone/calcite for poultry grit, similar Ca content
+  {id:21, name:"Calgrit",             cost:440,  dm:99, me:0.0,  cp:0.0,  fat:0.0, pufa:0.0, ndf:0,   adf:0,  starch:0,  rdp:0,   udp:0,   lys:0,  met:0,  thr:0,  trp:0,  his:0,  ca:36.0,p:0,   mg:1.0, na:0,   k:0,   s:0,   co:0, cu:0.5,  fe:300,   mn:8,   zn:8,   se:0.02,   npn:false, minInc:0, maxInc:3,  active:false},
+  {id:22, name:"Dical phosphate 18%", cost:1530, dm:98, me:0.0,  cp:0.0,  fat:0.0, pufa:0.0, ndf:0,   adf:0,  starch:0,  rdp:0,   udp:0,   lys:0,  met:0,  thr:0,  trp:0,  his:0,  ca:22.0,p:18.5,mg:0.5, na:0,   k:0,   s:0,   co:0, cu:2.0,  fe:800,   mn:20,   zn:80,   se:0.02,   npn:false, minInc:0, maxInc:2,  active:true},
+  {id:23, name:"Salt (fine dried)",   cost:340,  dm:99, me:0.0,  cp:0.0,  fat:0.0, pufa:0.0, ndf:0,   adf:0,  starch:0,  rdp:0,   udp:0,   lys:0,  met:0,  thr:0,  trp:0,  his:0,  ca:0,   p:0,   mg:0,   na:39.0,k:0,   s:0,   co:0, cu:0,  fe:0,   mn:0,   zn:0,   se:0,   npn:false, minInc:0, maxInc:1,  active:true},
+  // Sodium bicarbonate — rumen buffer, Na carrier, no ME
+  {id:24, name:"Sodium bicarbonate",  cost:920,  dm:99, me:0.0,  cp:0.0,  fat:0.0, pufa:0.0, ndf:0,   adf:0,  starch:0,  rdp:0,   udp:0,   lys:0,  met:0,  thr:0,  trp:0,  his:0,  ca:0,   p:0,   mg:0,   na:27.4,k:0,   s:0,   co:0, cu:0,  fe:0,   mn:0,   zn:0,   se:0,   npn:false, minInc:0, maxInc:1.5,active:false},
+  // Acid Buf (sodium sesquicarbonate) — similar Na to NaHCO3, slower release
+  {id:25, name:"Acid Buf",            cost:1420, dm:99, me:0.0,  cp:0.0,  fat:0.0, pufa:0.0, ndf:0,   adf:0,  starch:0,  rdp:0,   udp:0,   lys:0,  met:0,  thr:0,  trp:0,  his:0,  ca:0,   p:0,   mg:0,   na:25.0,k:0,   s:0,   co:0, cu:0,  fe:0,   mn:0,   zn:0,   se:0,   npn:false, minInc:0, maxInc:1.5,active:false},
+  // Magnesium oxide (~54% Mg) — high Mg, used for hypomagnesaemia prevention
+  {id:26, name:"MgO (Emag 523)",      cost:820,  dm:99, me:0.0,  cp:0.0,  fat:0.0, pufa:0.0, ndf:0,   adf:0,  starch:0,  rdp:0,   udp:0,   lys:0,  met:0,  thr:0,  trp:0,  his:0,  ca:0,   p:0,   mg:54.0,na:0,   k:0,   s:0,   co:0, cu:0,  fe:500,   mn:0,   zn:0,   se:0,   npn:false, minInc:0, maxInc:0.5,active:false},
+  // Magnesium sulphate (Epsom salt ~9.9% Mg, 13% S)
+  {id:27, name:"Magnesium sulphate",  cost:580,  dm:99, me:0.0,  cp:0.0,  fat:0.0, pufa:0.0, ndf:0,   adf:0,  starch:0,  rdp:0,   udp:0,   lys:0,  met:0,  thr:0,  trp:0,  his:0,  ca:0,   p:0,   mg:9.9, na:0,   k:0,   s:13.0,co:0, cu:0,  fe:0,   mn:0,   zn:0,   se:0,   npn:false, minInc:0, maxInc:0.5,active:false},
+  // Magnesium chloride (~12% Mg)
+  {id:28, name:"Magnesium chloride",  cost:740,  dm:99, me:0.0,  cp:0.0,  fat:0.0, pufa:0.0, ndf:0,   adf:0,  starch:0,  rdp:0,   udp:0,   lys:0,  met:0,  thr:0,  trp:0,  his:0,  ca:0,   p:0,   mg:12.0,na:0,   k:0,   s:0,   co:0, cu:0,  fe:0,   mn:0,   zn:0,   se:0,   npn:false, minInc:0, maxInc:0.5,active:false},
+  // Gypsum (calcium sulphate ~23% Ca, 18.6% S) — DCAD management
+  {id:29, name:"Gypsum",             cost:620,  dm:99, me:0.0,  cp:0.0,  fat:0.0, pufa:0.0, ndf:0,   adf:0,  starch:0,  rdp:0,   udp:0,   lys:0,  met:0,  thr:0,  trp:0,  his:0,  ca:23.0,p:0,   mg:0,   na:0,   k:0,   s:18.6,co:0, cu:0,  fe:200,   mn:0,   zn:0,   se:0,   npn:false, minInc:0, maxInc:2,  active:false},
+  // Sodium bentonite — binder/anti-caking, minimal nutritive value
+  {id:30, name:"Sodium bentonite",   cost:230,  dm:90, me:0.0,  cp:0.0,  fat:0.0, pufa:0.0, ndf:0,   adf:0,  starch:0,  rdp:0,   udp:0,   lys:0,  met:0,  thr:0,  trp:0,  his:0,  ca:0.5, p:0,   mg:0,   na:2.0, k:0,   s:0,   co:0, cu:0,  fe:5000,   mn:500,   zn:50,   se:0,   npn:false, minInc:0, maxInc:2,  active:false},
+  // Ammonium sulphate — N + S source, NPN. 21% N equiv CP ~131%, 24% S
+  {id:31, name:"Ammonium sulphate",  cost:730,  dm:99, me:0.0,  cp:131,  fat:0.0, pufa:0.0, ndf:0,   adf:0,  starch:0,  rdp:131, udp:0,   lys:0,  met:0,  thr:0,  trp:0,  his:0,  ca:0,   p:0,   mg:0,   na:0,   k:0,   s:24.0,co:0, cu:0,  fe:0,   mn:0,   zn:0,   se:0,   npn:true,  minInc:0, maxInc:0.5,active:false},
+  // Ammonium chloride — urinary acidifier, NPN, 26% N equiv CP ~163%
+  {id:32, name:"Ammonium chloride",  cost:840,  dm:99, me:0.0,  cp:163,  fat:0.0, pufa:0.0, ndf:0,   adf:0,  starch:0,  rdp:163, udp:0,   lys:0,  met:0,  thr:0,  trp:0,  his:0,  ca:0,   p:0,   mg:0,   na:0,   k:0,   s:0,   co:0, cu:0,  fe:0,   mn:0,   zn:0,   se:0,   npn:true,  minInc:0, maxInc:0.3,active:false},
+  // ── AMINO ACIDS ──
+  // L-Lysine HCl — 78.8% L-lysine by weight. cp:0 triggers direct %DM AA accumulation.
+  {id:33, name:"L-Lysine",           cost:4290, dm:98, me:18.0, cp:0.0,  fat:0.0, pufa:0.0, ndf:0,   adf:0,  starch:0,  rdp:0,   udp:0,   lys:78.8,met:0, thr:0,  trp:0,  his:0,  ca:0,   p:0,   mg:0,   na:0,   k:0,   s:0,   co:0, cu:0,  fe:0,   mn:0,   zn:0,   se:0,   npn:false, minInc:0, maxInc:0.5,active:false},
+  // DL-Methionine (99% methionine)
+  {id:34, name:"DL-Methionine",      cost:4980, dm:99, me:22.0, cp:0.0,  fat:0.0, pufa:0.0, ndf:0,   adf:0,  starch:0,  rdp:0,   udp:0,   lys:0,  met:99.0,thr:0,  trp:0,  his:0,  ca:0,   p:0,   mg:0,   na:0,   k:0,   s:32.0,co:0, cu:0,  fe:0,   mn:0,   zn:0,   se:0,   npn:false, minInc:0, maxInc:0.3,active:false},
+  // L-Threonine (~98%)
+  {id:35, name:"L-Threonine",        cost:4180, dm:98, me:18.0, cp:0.0,  fat:0.0, pufa:0.0, ndf:0,   adf:0,  starch:0,  rdp:0,   udp:0,   lys:0,  met:0,  thr:98.0,trp:0,  his:0,  ca:0,   p:0,   mg:0,   na:0,   k:0,   s:0,   co:0, cu:0,  fe:0,   mn:0,   zn:0,   se:0,   npn:false, minInc:0, maxInc:0.2,active:false},
+  // L-Tryptophan 98%
+  {id:36, name:"L-Tryptophan 98%",   cost:22550,dm:98, me:18.0, cp:0.0,  fat:0.0, pufa:0.0, ndf:0,   adf:0,  starch:0,  rdp:0,   udp:0,   lys:0,  met:0,  thr:0,  trp:98.0,his:0,  ca:0,   p:0,   mg:0,   na:0,   k:0,   s:0,   co:0, cu:0,  fe:0,   mn:0,   zn:0,   se:0,   npn:false, minInc:0, maxInc:0.1,active:false},
+  // ── NPN ──
+  {id:37, name:"Urea",               cost:1320, dm:99, me:0.0,  cp:281,  fat:0.0, pufa:0.0, ndf:0,   adf:0,  starch:0,  rdp:281, udp:0,   lys:0,  met:0,  thr:0,  trp:0,  his:0,  ca:0,   p:0,   mg:0,   na:0,   k:0,   s:0,   co:0, cu:0,  fe:0,   mn:0,   zn:0,   se:0,   npn:true,  minInc:0, maxInc:0.3,active:false},
+  // ── ADDITIVES (cost only — no nutritive ME, toggle on to include in cost calc) ──
+  // Zinc oxide granular (~80% Zn = 800,000 mg/kg)
+  {id:38, name:"Zinc oxide",          cost:6490, dm:99, me:0.0,  cp:0.0,  fat:0.0, pufa:0.0, ndf:0, adf:0, starch:0, rdp:0, udp:0, lys:0, met:0, thr:0, trp:0, his:0, ca:0,   p:0,   mg:0,   na:0,   k:0,   s:0,   co:0, cu:0,      fe:0,    mn:0,    zn:800000, se:0,   npn:false, minInc:0, maxInc:0.05, active:false},
+  // Copper sulphate 25% — 6.25% Cu = 62,500 mg/kg Cu
+  {id:39, name:"Copper sulphate 25%", cost:5310, dm:99, me:0.0,  cp:0.0,  fat:0.0, pufa:0.0, ndf:0, adf:0, starch:0, rdp:0, udp:0, lys:0, met:0, thr:0, trp:0, his:0, ca:0,   p:0,   mg:0,   na:0,   k:0,   s:12.8,co:0, cu:62500,  fe:0,    mn:0,    zn:0,      se:0,   npn:false, minInc:0, maxInc:0.05, active:false},
+  // Zinmet 50 — zinc methionine complex, ~50% Zn = 500,000 mg/kg
+  {id:43, name:"Zinmet 50",           cost:5940, dm:99, me:0.0,  cp:0.0,  fat:0.0, pufa:0.0, ndf:0, adf:0, starch:0, rdp:0, udp:0, lys:0, met:0, thr:0, trp:0, his:0, ca:0,   p:0,   mg:0,   na:0,   k:0,   s:0,   co:0, cu:0,      fe:0,    mn:0,    zn:500000, se:0,   npn:false, minInc:0, maxInc:0.05, active:false},
+  // Zinc sulphate — ~36% Zn = 360,000 mg/kg
+  {id:44, name:"Zinc sulphate",       cost:2310, dm:99, me:0.0,  cp:0.0,  fat:0.0, pufa:0.0, ndf:0, adf:0, starch:0, rdp:0, udp:0, lys:0, met:0, thr:0, trp:0, his:0, ca:0,   p:0,   mg:0,   na:0,   k:0,   s:17.5,co:0, cu:0,      fe:0,    mn:0,    zn:360000, se:0,   npn:false, minInc:0, maxInc:0.05, active:false},
+  // Availa 4 — chelated Zn/Mn/Cu/Co blend. Typical: Zn 120,000 Cu 40,000 Mn 40,000 Co 2,000 mg/kg
+  {id:45, name:"Availa 4",            cost:11170,dm:99, me:0.0,  cp:0.0,  fat:0.0, pufa:0.0, ndf:0, adf:0, starch:0, rdp:0, udp:0, lys:0, met:0, thr:0, trp:0, his:0, ca:0,   p:0,   mg:0,   na:0,   k:0,   s:0,   co:2000,cu:40000,  fe:0,    mn:40000,zn:120000, se:0,   npn:false, minInc:0, maxInc:0.1,  active:false},
+  // Availa Zn 120 — chelated Zn, ~120,000 mg/kg Zn
+  {id:46, name:"Availa Zn 120",       cost:11110,dm:99, me:0.0,  cp:0.0,  fat:0.0, pufa:0.0, ndf:0, adf:0, starch:0, rdp:0, udp:0, lys:0, met:0, thr:0, trp:0, his:0, ca:0,   p:0,   mg:0,   na:0,   k:0,   s:0,   co:0, cu:0,      fe:0,    mn:0,    zn:120000, se:0,   npn:false, minInc:0, maxInc:0.1,  active:false},
+  // Borax 15% — boron source, 15% B2O3 = ~4.7% B. Trace only.
+  {id:47, name:"Borax 15%",           cost:2200, dm:99, me:0.0,  cp:0.0,  fat:0.0, pufa:0.0, ndf:0, adf:0, starch:0, rdp:0, udp:0, lys:0, met:0, thr:0, trp:0, his:0, ca:0,   p:0,   mg:0,   na:3.0, k:0,   s:0,   co:0, cu:0,      fe:0,    mn:0,    zn:0,      se:0,   npn:false, minInc:0, maxInc:0.03, active:false},
+  // Monensin 10% — ionophore
+  {id:40, name:"Monensin 10% (Deb1701)",cost:5720,dm:99,me:0.0, cp:0.0,  fat:0.0, pufa:0.0, ndf:0, adf:0, starch:0, rdp:0, udp:0, lys:0, met:0, thr:0, trp:0, his:0, ca:0,   p:0,   mg:0,   na:0,   k:0,   s:0,   co:0, cu:0,      fe:0,    mn:0,    zn:0,      se:0,   npn:false, minInc:0, maxInc:0.05, active:false},
+  // Bovatec 20CC — lasalocid
+  {id:41, name:"Bovatec 20CC",        cost:29150,dm:99, me:0.0,  cp:0.0,  fat:0.0, pufa:0.0, ndf:0, adf:0, starch:0, rdp:0, udp:0, lys:0, met:0, thr:0, trp:0, his:0, ca:0,   p:0,   mg:0,   na:0,   k:0,   s:0,   co:0, cu:0,      fe:0,    mn:0,    zn:0,      se:0,   npn:false, minInc:0, maxInc:0.02, active:false},
+  // X-Zelit — zeolite for pre-fresh Ca binding
+  {id:42, name:"X-Zelit",             cost:6490, dm:99, me:0.0,  cp:0.0,  fat:0.0, pufa:0.0, ndf:0, adf:0, starch:0, rdp:0, udp:0, lys:0, met:0, thr:0, trp:0, his:0, ca:8.0, p:0,   mg:0,   na:0,   k:0,   s:0,   co:0, cu:0,      fe:0,    mn:0,    zn:0,      se:0,   npn:false, minInc:0, maxInc:2,    active:false},
+];
+let pelletNextId = 43;
+/*PELLET_INGREDIENTS_END*/
+
+const defaults = {
+  dairy:{
+    maintenance:    {lw:550, dm_min:15,  dm_tgt:18,  dm_max:22,  me_min:120, me_tgt:140, me_max:160, cp_min:14,  cp_tgt:16,  cp_max:20,  ndf_min:28, ndf_tgt:35, ndf_max:50, adf_min:0,adf_tgt:20,adf_max:99, starch_min:0,starch_tgt:22,starch_max:99, fat_min:0,fat_tgt:3.5,fat_max:8, ca_min:0.60,ca_tgt:0.70,p_min:0.35,p_tgt:0.40, mg_min:0,mg_tgt:0.22,na_min:0,na_tgt:0.20,k_min:0,k_tgt:1.80,k_max:2.5,s_min:0,s_tgt:0.22},
+    early_lactation:{lw:550, dm_min:18,  dm_tgt:22,  dm_max:25,  me_min:160, me_tgt:180, me_max:200, cp_min:17,  cp_tgt:19,  cp_max:22,  ndf_min:28, ndf_tgt:32, ndf_max:45, adf_min:0,adf_tgt:18,adf_max:99, starch_min:0,starch_tgt:26,starch_max:99, fat_min:0,fat_tgt:4.0,fat_max:8, ca_min:0.70,ca_tgt:0.80,p_min:0.45,p_tgt:0.50, mg_min:0,mg_tgt:0.28,na_min:0,na_tgt:0.22,k_min:0,k_tgt:1.80,k_max:2.5,s_min:0,s_tgt:0.25},
+    mid_lactation:  {lw:550, dm_min:16,  dm_tgt:19,  dm_max:22,  me_min:140, me_tgt:158, me_max:175, cp_min:15,  cp_tgt:17,  cp_max:20,  ndf_min:30, ndf_tgt:36, ndf_max:48, adf_min:0,adf_tgt:19,adf_max:99, starch_min:0,starch_tgt:24,starch_max:99, fat_min:0,fat_tgt:3.8,fat_max:8, ca_min:0.65,ca_tgt:0.75,p_min:0.40,p_tgt:0.45, mg_min:0,mg_tgt:0.25,na_min:0,na_tgt:0.20,k_min:0,k_tgt:1.80,k_max:2.5,s_min:0,s_tgt:0.22},
+    late_pregnancy: {lw:600, dm_min:14,  dm_tgt:17,  dm_max:20,  me_min:130, me_tgt:148, me_max:165, cp_min:14,  cp_tgt:16,  cp_max:18,  ndf_min:32, ndf_tgt:38, ndf_max:52, adf_min:0,adf_tgt:22,adf_max:99, starch_min:0,starch_tgt:20,starch_max:99, fat_min:0,fat_tgt:3.5,fat_max:8, ca_min:0.65,ca_tgt:0.75,p_min:0.38,p_tgt:0.42, mg_min:0,mg_tgt:0.28,na_min:0,na_tgt:0.20,k_min:0,k_tgt:1.60,k_max:2.5,s_min:0,s_tgt:0.22},
+    growing:        {lw:400, dm_min:8,   dm_tgt:11,  dm_max:14,  me_min:80,  me_tgt:95,  me_max:110, cp_min:12,  cp_tgt:15,  cp_max:18,  ndf_min:28, ndf_tgt:38, ndf_max:55, adf_min:0,adf_tgt:22,adf_max:99, starch_min:0,starch_tgt:20,starch_max:99, fat_min:0,fat_tgt:3.2,fat_max:8, ca_min:0.40,ca_tgt:0.50,p_min:0.28,p_tgt:0.32, mg_min:0,mg_tgt:0.20,na_min:0,na_tgt:0.18,k_min:0,k_tgt:1.40,k_max:2.5,s_min:0,s_tgt:0.20}
+  },
+  beef:{
+    maintenance:    {lw:500, dm_min:8,   dm_tgt:11,  dm_max:14,  me_min:80,  me_tgt:95,  me_max:110, cp_min:8,   cp_tgt:11,  cp_max:14,  ndf_min:35, ndf_tgt:45, ndf_max:60, adf_min:0,adf_tgt:26,adf_max:99, starch_min:0,starch_tgt:15,starch_max:99, fat_min:0,fat_tgt:3.0,fat_max:8, ca_min:0.35,ca_tgt:0.42,p_min:0.25,p_tgt:0.28, mg_min:0,mg_tgt:0.20,na_min:0,na_tgt:0.18,k_min:0,k_tgt:1.20,k_max:2.5,s_min:0,s_tgt:0.18},
+    early_lactation:{lw:500, dm_min:10,  dm_tgt:13,  dm_max:16,  me_min:100, me_tgt:118, me_max:135, cp_min:12,  cp_tgt:14,  cp_max:17,  ndf_min:30, ndf_tgt:40, ndf_max:55, adf_min:0,adf_tgt:22,adf_max:99, starch_min:0,starch_tgt:20,starch_max:99, fat_min:0,fat_tgt:3.5,fat_max:8, ca_min:0.45,ca_tgt:0.52,p_min:0.30,p_tgt:0.34, mg_min:0,mg_tgt:0.22,na_min:0,na_tgt:0.18,k_min:0,k_tgt:1.40,k_max:2.5,s_min:0,s_tgt:0.20},
+    mid_lactation:  {lw:500, dm_min:9,   dm_tgt:12,  dm_max:15,  me_min:95,  me_tgt:110, me_max:125, cp_min:11,  cp_tgt:13,  cp_max:16,  ndf_min:32, ndf_tgt:42, ndf_max:56, adf_min:0,adf_tgt:24,adf_max:99, starch_min:0,starch_tgt:18,starch_max:99, fat_min:0,fat_tgt:3.2,fat_max:8, ca_min:0.42,ca_tgt:0.50,p_min:0.28,p_tgt:0.32, mg_min:0,mg_tgt:0.20,na_min:0,na_tgt:0.18,k_min:0,k_tgt:1.30,k_max:2.5,s_min:0,s_tgt:0.18},
+    late_pregnancy: {lw:520, dm_min:9,   dm_tgt:12,  dm_max:14,  me_min:95,  me_tgt:110, me_max:125, cp_min:10,  cp_tgt:12,  cp_max:15,  ndf_min:34, ndf_tgt:43, ndf_max:58, adf_min:0,adf_tgt:25,adf_max:99, starch_min:0,starch_tgt:16,starch_max:99, fat_min:0,fat_tgt:3.0,fat_max:8, ca_min:0.45,ca_tgt:0.52,p_min:0.28,p_tgt:0.32, mg_min:0,mg_tgt:0.22,na_min:0,na_tgt:0.18,k_min:0,k_tgt:1.30,k_max:2.5,s_min:0,s_tgt:0.18},
+    growing:        {lw:400, dm_min:8,   dm_tgt:10,  dm_max:13,  me_min:90,  me_tgt:105, me_max:120, cp_min:12,  cp_tgt:14,  cp_max:17,  ndf_min:30, ndf_tgt:40, ndf_max:55, adf_min:0,adf_tgt:22,adf_max:99, starch_min:0,starch_tgt:28,starch_max:99, fat_min:0,fat_tgt:3.5,fat_max:8, ca_min:0.40,ca_tgt:0.48,p_min:0.28,p_tgt:0.32, mg_min:0,mg_tgt:0.20,na_min:0,na_tgt:0.18,k_min:0,k_tgt:1.20,k_max:2.5,s_min:0,s_tgt:0.20}
+  },
+  sheep:{
+    maintenance:    {lw:70,  dm_min:1.2, dm_tgt:1.6, dm_max:2.0, me_min:14,  me_tgt:17,  me_max:20,  cp_min:8,   cp_tgt:11,  cp_max:14,  ndf_min:35, ndf_tgt:45, ndf_max:60, adf_min:0,adf_tgt:26,adf_max:99, starch_min:0,starch_tgt:12,starch_max:99, fat_min:0,fat_tgt:2.8,fat_max:8, ca_min:0.35,ca_tgt:0.42,p_min:0.25,p_tgt:0.28, mg_min:0,mg_tgt:0.20,na_min:0,na_tgt:0.18,k_min:0,k_tgt:1.00,k_max:2.5,s_min:0,s_tgt:0.18},
+    early_lactation:{lw:75,  dm_min:1.8, dm_tgt:2.3, dm_max:2.8, me_min:20,  me_tgt:25,  me_max:30,  cp_min:14,  cp_tgt:17,  cp_max:20,  ndf_min:28, ndf_tgt:36, ndf_max:50, adf_min:0,adf_tgt:20,adf_max:99, starch_min:0,starch_tgt:20,starch_max:99, fat_min:0,fat_tgt:3.5,fat_max:8, ca_min:0.60,ca_tgt:0.70,p_min:0.38,p_tgt:0.42, mg_min:0,mg_tgt:0.25,na_min:0,na_tgt:0.20,k_min:0,k_tgt:1.20,k_max:2.5,s_min:0,s_tgt:0.22},
+    mid_lactation:  {lw:70,  dm_min:1.5, dm_tgt:2.0, dm_max:2.5, me_min:18,  me_tgt:22,  me_max:25,  cp_min:13,  cp_tgt:15,  cp_max:18,  ndf_min:30, ndf_tgt:38, ndf_max:52, adf_min:0,adf_tgt:22,adf_max:99, starch_min:0,starch_tgt:18,starch_max:99, fat_min:0,fat_tgt:3.2,fat_max:8, ca_min:0.55,ca_tgt:0.65,p_min:0.35,p_tgt:0.38, mg_min:0,mg_tgt:0.22,na_min:0,na_tgt:0.18,k_min:0,k_tgt:1.10,k_max:2.5,s_min:0,s_tgt:0.20},
+    late_pregnancy: {lw:75,  dm_min:1.5, dm_tgt:1.9, dm_max:2.2, me_min:17,  me_tgt:21,  me_max:24,  cp_min:12,  cp_tgt:14,  cp_max:17,  ndf_min:32, ndf_tgt:40, ndf_max:55, adf_min:0,adf_tgt:23,adf_max:99, starch_min:0,starch_tgt:15,starch_max:99, fat_min:0,fat_tgt:3.0,fat_max:8, ca_min:0.55,ca_tgt:0.65,p_min:0.34,p_tgt:0.38, mg_min:0,mg_tgt:0.25,na_min:0,na_tgt:0.18,k_min:0,k_tgt:1.10,k_max:2.5,s_min:0,s_tgt:0.20},
+    growing:        {lw:45,  dm_min:1.0, dm_tgt:1.4, dm_max:1.8, me_min:12,  me_tgt:15,  me_max:18,  cp_min:12,  cp_tgt:15,  cp_max:18,  ndf_min:30, ndf_tgt:38, ndf_max:55, adf_min:0,adf_tgt:22,adf_max:99, starch_min:0,starch_tgt:18,starch_max:99, fat_min:0,fat_tgt:3.0,fat_max:8, ca_min:0.40,ca_tgt:0.48,p_min:0.28,p_tgt:0.32, mg_min:0,mg_tgt:0.20,na_min:0,na_tgt:0.18,k_min:0,k_tgt:1.00,k_max:2.5,s_min:0,s_tgt:0.18}
+  },
+  goat:{
+    maintenance:    {lw:60,  dm_min:1.0, dm_tgt:1.4, dm_max:1.8, me_min:12,  me_tgt:14,  me_max:17,  cp_min:8,   cp_tgt:11,  cp_max:14,  ndf_min:35, ndf_tgt:45, ndf_max:60, adf_min:0,adf_tgt:26,adf_max:99, starch_min:0,starch_tgt:12,starch_max:99, fat_min:0,fat_tgt:2.8,fat_max:8, ca_min:0.35,ca_tgt:0.42,p_min:0.25,p_tgt:0.28, mg_min:0,mg_tgt:0.20,na_min:0,na_tgt:0.18,k_min:0,k_tgt:1.00,k_max:2.5,s_min:0,s_tgt:0.18},
+    early_lactation:{lw:65,  dm_min:1.5, dm_tgt:2.0, dm_max:2.5, me_min:18,  me_tgt:22,  me_max:26,  cp_min:14,  cp_tgt:17,  cp_max:20,  ndf_min:28, ndf_tgt:36, ndf_max:50, adf_min:0,adf_tgt:20,adf_max:99, starch_min:0,starch_tgt:20,starch_max:99, fat_min:0,fat_tgt:3.5,fat_max:8, ca_min:0.60,ca_tgt:0.70,p_min:0.38,p_tgt:0.42, mg_min:0,mg_tgt:0.25,na_min:0,na_tgt:0.20,k_min:0,k_tgt:1.20,k_max:2.5,s_min:0,s_tgt:0.22},
+    mid_lactation:  {lw:62,  dm_min:1.3, dm_tgt:1.8, dm_max:2.2, me_min:16,  me_tgt:19,  me_max:22,  cp_min:13,  cp_tgt:15,  cp_max:18,  ndf_min:30, ndf_tgt:38, ndf_max:52, adf_min:0,adf_tgt:22,adf_max:99, starch_min:0,starch_tgt:18,starch_max:99, fat_min:0,fat_tgt:3.2,fat_max:8, ca_min:0.55,ca_tgt:0.65,p_min:0.35,p_tgt:0.38, mg_min:0,mg_tgt:0.22,na_min:0,na_tgt:0.18,k_min:0,k_tgt:1.10,k_max:2.5,s_min:0,s_tgt:0.20},
+    late_pregnancy: {lw:65,  dm_min:1.3, dm_tgt:1.7, dm_max:2.0, me_min:15,  me_tgt:18,  me_max:21,  cp_min:12,  cp_tgt:14,  cp_max:17,  ndf_min:32, ndf_tgt:40, ndf_max:55, adf_min:0,adf_tgt:23,adf_max:99, starch_min:0,starch_tgt:15,starch_max:99, fat_min:0,fat_tgt:3.0,fat_max:8, ca_min:0.55,ca_tgt:0.65,p_min:0.34,p_tgt:0.38, mg_min:0,mg_tgt:0.22,na_min:0,na_tgt:0.18,k_min:0,k_tgt:1.10,k_max:2.5,s_min:0,s_tgt:0.20},
+    growing:        {lw:35,  dm_min:0.8, dm_tgt:1.1, dm_max:1.5, me_min:10,  me_tgt:12,  me_max:15,  cp_min:12,  cp_tgt:15,  cp_max:18,  ndf_min:30, ndf_tgt:38, ndf_max:55, adf_min:0,adf_tgt:22,adf_max:99, starch_min:0,starch_tgt:16,starch_max:99, fat_min:0,fat_tgt:3.0,fat_max:8, ca_min:0.38,ca_tgt:0.46,p_min:0.26,p_tgt:0.30, mg_min:0,mg_tgt:0.20,na_min:0,na_tgt:0.18,k_min:0,k_tgt:1.00,k_max:2.5,s_min:0,s_tgt:0.18}
+  }
+};
+
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById('mode-tmr').classList.toggle('active', mode==='tmr');
+  document.getElementById('mode-pellet').classList.toggle('active', mode==='pellet');
+  // Switch ME constraint label and sensible defaults
+  const meLabel = document.getElementById('me-label');
+  if (mode === 'pellet') {
+    meLabel.textContent = 'ME (MJ/kg DM)';
+    // Only update if values look like total MJ (i.e. > 30)
+    if (parseFloat(document.getElementById('me_min').value) > 30) {
+      document.getElementById('me_min').value = '11.5';
+      document.getElementById('me_tgt').value = '0';
+      document.getElementById('me_max').value = '14.5';
+    }
+  } else {
+    meLabel.textContent = 'ME (MJ total)';
+    // Only update if values look like density (i.e. < 30)
+    if (parseFloat(document.getElementById('me_min').value) < 30) {
+      document.getElementById('me_min').value = '120';
+      document.getElementById('me_tgt').value = '0';
+      document.getElementById('me_max').value = '180';
+    }
+  }
+  updateDefaults();
+}
+
+function updateDefaults() {
+  const sp = document.getElementById('species').value;
+  const st = document.getElementById('stage').value;
+  const lw = parseFloat(document.getElementById('liveweight').value) || 550;
+  const milkYield = parseFloat(document.getElementById('milk_yield')?.value) || 0;
+
+  // Show milk yield field only for lactating stages
+  const isLactating = st === 'early_lactation' || st === 'mid_lactation';
+  const milkField = document.getElementById('milk-yield-field');
+  if (milkField) milkField.style.display = isLactating ? '' : 'none';
+
+  const d = (defaults[sp]&&defaults[sp][st])||defaults[sp]['maintenance'];
+  if (!d) return;
+
+  // ── Calculated requirements when milk yield is provided and stage is lactating ──
+  // Based on CSIRO Feeding Standards for Australian Livestock (Ruminants)
+  // ME maintenance = 0.26 × LW^0.75 × 1.0 (correction factor for housed cattle)
+  // ME milk = milk_yield × 5.0 MJ/L (average 4% fat milk; ~5.2 for high-fat)
+  // CP maintenance ≈ 6.25 × 0.45 × LW^0.75 × 0.67 (endogenous urinary + metabolic fecal)
+  // CP milk ≈ milk_yield × 50 g/L (average 3.2% true protein + margin for efficiency)
+
+  let calcMe = null, calcCp = null, calcDm = null;
+
+  if (isLactating && milkYield > 0) {
+    const lwMeta = Math.pow(lw, 0.75);  // metabolic body weight
+
+    // ME requirements (MJ/day) — CSIRO Feeding Standards for Australian Livestock
+    // Cattle maintenance: 0.52 MJ/kg LW^0.75 (housed); small ruminants: 0.45
+    const meMaint = (sp === 'sheep' || sp === 'goat')
+      ? 0.45 * lwMeta
+      : 0.52 * lwMeta;
+    const meMilk = milkYield * 5.0;   // ~5.0 MJ/L for average 4% fat milk
+    // Early lactation: cow draws on body reserves, so actual feed ME need is slightly less
+    // but we target slightly higher to account for reduced digestibility at peak intake
+    const meTotal = meMaint + meMilk;
+
+    // DM intake — NRC 2001 equation for lactating dairy cattle:
+    // DMI = (0.372 × FCM + 0.0968 × LW^0.75) × fill_factor
+    // FCM (4% fat-corrected milk) = milk × (0.4 + 0.15 × 4.0)
+    // fill_factor: early lactation rumen fill limits intake to ~0.88–0.93 of potential
+    // Small ruminants: scale by relative metabolic size
+    let dmiTotal;
+    if (sp === 'sheep' || sp === 'goat') {
+      // Simplified for small ruminants — no validated equivalent of NRC dairy equation
+      dmiTotal = 0.8 + milkYield * 0.55 * (st === 'early_lactation' ? 0.88 : 1.0);
+      dmiTotal = Math.max(dmiTotal, lw * 0.025);
+    } else {
+      const fcm = milkYield * (0.4 + 0.15 * 4.0);  // assume 4% fat
+      const fillFactor = st === 'early_lactation' ? 0.90 : 0.97;
+      dmiTotal = (0.372 * fcm + 0.0968 * lwMeta) * fillFactor;
+      dmiTotal = Math.max(dmiTotal, lw * 0.020);  // floor at 2% LW
+      dmiTotal = Math.min(dmiTotal, lw * 0.050);  // ceiling at 5% LW
+    }
+
+    // CP: use direct %DM target scaled with milk yield
+    // Based on CSIRO: ~16% CP base for dairy, +0.08% per litre above 15L
+    // Sheep/goat scale down proportionally
+    let cpPct;
+    if (sp === 'sheep' || sp === 'goat') {
+      cpPct = 13.0 + Math.max(0, milkYield - 1.5) * 1.2;  // L/day for small ruminants
+    } else {
+      cpPct = 15.5 + Math.max(0, milkYield - 15) * 0.08;  // dairy/beef cattle
+    }
+    cpPct = Math.min(cpPct, 20.0);  // cap at 20% — above that something else is wrong
+
+    calcDm = dmiTotal;
+    calcMe = meTotal;
+    calcCp = cpPct;
+  }
+
+  // ── Apply values — calculated if available, else fall back to static table ──
+  const setF = (id, val) => { const el=document.getElementById(id); if(el && val!==null && val!==undefined) el.value = typeof val==='number' ? parseFloat(val.toFixed(2)) : val; };
+
+  // DM
+  if (calcDm) {
+    setF('dm_min', calcDm * 0.88);
+    setF('dm_tgt', calcDm);
+    setF('dm_max', calcDm * 1.10);
+  } else {
+    setF('dm_min', d.dm_min); setF('dm_tgt', d.dm_tgt); setF('dm_max', d.dm_max);
+  }
+
+  // CP — calculated or static
+  if (calcCp) {
+    setF('cp_min', Math.max(10, (calcCp - 1.5).toFixed(1)));
+    setF('cp_tgt', calcCp.toFixed(1));
+    setF('cp_max', Math.min(22, (calcCp + 2.0).toFixed(1)));
+  } else {
+    setF('cp_min', d.cp_min); setF('cp_tgt', d.cp_tgt); setF('cp_max', d.cp_max);
+  }
+
+  // ME
+  const dmTgtFinal = calcDm || d.dm_tgt || ((d.dm_min + d.dm_max) / 2);
+  const meTotalFinal = calcMe || d.me_tgt || ((d.me_min + d.me_max) / 2);
+  const meTotalMin = calcMe ? calcMe * 0.95 : d.me_min;
+  const meTotalMax = calcMe ? calcMe * 1.08 : d.me_max;
+
+  if (currentMode === 'pellet') {
+    document.getElementById('me-label').textContent = 'ME (MJ/kg DM)';
+    setF('me_min', (meTotalMin / dmTgtFinal).toFixed(1));
+    setF('me_tgt', (meTotalFinal / dmTgtFinal).toFixed(1));
+    setF('me_max', (meTotalMax / dmTgtFinal).toFixed(1));
+  } else {
+    document.getElementById('me-label').textContent = 'ME (MJ total)';
+    setF('me_min', calcMe ? meTotalMin.toFixed(0) : d.me_min);
+    setF('me_tgt', calcMe ? meTotalFinal.toFixed(0) : (d.me_tgt || 0));
+    setF('me_max', calcMe ? meTotalMax.toFixed(0) : d.me_max);
+  }
+
+  // Static table fields (NDF, ADF, starch, fat, minerals — not calculated from milk yield)
+  const staticMap = {
+    ndf_min:'ndf_min', ndf_tgt:'ndf_tgt', ndf_max:'ndf_max',
+    adf_min:'adf_min', adf_tgt:'adf_tgt', adf_max:'adf_max',
+    starch_min:'starch_min', starch_tgt:'starch_tgt', starch_max:'starch_max',
+    fat_min:'fat_min', fat_tgt:'fat_tgt', fat_max:'fat_max',
+    ca_min:'ca_min',   ca_tgt:'ca_tgt',
+    p_min:'p_min',     p_tgt:'p_tgt',
+    mg_min:'mg_min',   mg_tgt:'mg_tgt',
+    na_min:'na_min',   na_tgt:'na_tgt',
+    k_min:'k_min',     k_tgt:'k_tgt',   k_max:'k_max',
+    s_min:'s_min',     s_tgt:'s_tgt',
+  };
+  for (const [elId, key] of Object.entries(staticMap)) {
+    const el = document.getElementById(elId);
+    if (el && d[key] !== undefined) el.value = d[key];
+  }
+
+  // Ca and P scale with milk yield
+  if (isLactating && milkYield > 0 && calcDm) {
+    // Ca: ~1.25g/L milk + maintenance ~0.16g/kg LW; convert to %DM
+    const caTotal = (milkYield * 1.25 + lw * 0.16) / 1000; // kg/day
+    const caPct = (caTotal / calcDm) * 100;
+    setF('ca_min', Math.max(0.45, (caPct - 0.10).toFixed(2)));
+    setF('ca_tgt', caPct.toFixed(2));
+    // P: ~0.9g/L milk + maintenance ~0.12g/kg LW
+    const pTotal = (milkYield * 0.9 + lw * 0.12) / 1000;
+    const pPct = (pTotal / calcDm) * 100;
+    setF('p_min', Math.max(0.28, (pPct - 0.08).toFixed(2)));
+    setF('p_tgt', pPct.toFixed(2));
+  }
+
+  // RDP/UDP from CP target
+  const cpTgtFinal = calcCp || d.cp_tgt || 0;
+  if (cpTgtFinal > 0) {
+    // UDP proportion increases with milk yield — high producers need more bypass protein
+    const udpFrac = isLactating && milkYield > 30 ? 0.42 : isLactating && milkYield > 20 ? 0.38 : 0.35;
+    const rdpEl = document.getElementById('rdp_tgt');
+    const udpEl = document.getElementById('udp_tgt');
+    if (rdpEl) rdpEl.value = (cpTgtFinal * (1 - udpFrac)).toFixed(1);
+    if (udpEl) udpEl.value = (cpTgtFinal * udpFrac).toFixed(1);
+  }
+
+  // S target from N:S ratio 10:1
+  const sTgtCalc = cpTgtFinal > 0 ? ((cpTgtFinal * 0.16) / 10).toFixed(2) : null;
+  if (sTgtCalc) {
+    const sEl = document.getElementById('s_tgt');
+    if (sEl && parseFloat(sTgtCalc) > (d.s_tgt || 0)) sEl.value = sTgtCalc;
+  }
+
+  // Update liveweight display
+  setF('liveweight', lw);
+}
+
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab-bar .tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  ['req-macro','req-aa','req-mineral'].forEach(id => {
+    document.getElementById(id).classList.toggle('hidden', !id.includes(tab));
+  });
+}
+
+function ni(val, step, cb) {
+  const el = document.createElement('input');
+  el.type = 'number'; el.value = val; el.step = step||'0.1';
+  el.onchange = cb;
+  return el;
+}
+
+function renderTable() {
+  const tbody = document.getElementById('ing-tbody');
+  tbody.innerHTML = '';
+  ingredients.forEach(ing => {
+    const tr = document.createElement('tr');
+    if (!ing.active) tr.style.opacity = '0.38';
+    const maxVal = ing.maxInc >= 99 ? '' : ing.maxInc;
+
+    const td0 = document.createElement('td'); td0.className = 'sticky-0';
+    const tog = document.createElement('button');
+    tog.className = 'toggle ' + (ing.active ? 'on' : 'off');
+    tog.onclick = () => toggleIng(ing.id);
+    td0.appendChild(tog);
+
+    const td1 = document.createElement('td'); td1.className = 'sticky-1';
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text'; nameInput.value = ing.name; nameInput.style.width = '180px';
+    nameInput.onchange = e => updateIng(ing.id, 'name', e.target.value);
+    td1.appendChild(nameInput);
+
+    // ── Sticky: cost, minInc, maxInc ──
+    const tdCost = document.createElement('td'); tdCost.className = 'sticky-2';
+    const costInp = document.createElement('input');
+    costInp.type='number'; costInp.value=ing.cost; costInp.step='1';
+    costInp.onchange = e => updateIng(ing.id, 'cost', +e.target.value);
+    tdCost.appendChild(costInp);
+
+    const tdMin = document.createElement('td'); tdMin.className = 'sticky-3';
+    const minInp = document.createElement('input');
+    minInp.type='number'; minInp.value=ing.minInc; minInp.step='0.1'; minInp.min='0';
+    minInp.onchange = e => updateIng(ing.id, 'minInc', +e.target.value);
+    tdMin.appendChild(minInp);
+
+    const tdMax = document.createElement('td'); tdMax.className = 'sticky-4';
+    const maxInp = document.createElement('input');
+    maxInp.type='number'; maxInp.value=maxVal; maxInp.step='0.1'; maxInp.placeholder='∞';
+    maxInp.onchange = e => updateIng(ing.id, 'maxInc', e.target.value===''?99:+e.target.value);
+    tdMax.appendChild(maxInp);
+
+    const fields = [
+      ['dm',0.1,'border-left:2px solid var(--border-strong)'],['me',0.1],['cp',0.1],['fat',0.1],['pufa',0.1],
+      ['ndf',0.1,'border-left:2px solid var(--border-strong)'],['adf',0.1],['starch',0.1],
+      ['rdp',0.1,'border-left:2px solid var(--border-strong)'],['udp',0.1],
+      ['lys',0.1,'border-left:2px solid var(--border-strong)'],['met',0.1],['thr',0.1],['trp',0.1],['his',0.1],
+      ['ca',0.01,'border-left:2px solid var(--border-strong)'],['p',0.01],['mg',0.01],['na',0.01],['k',0.01],['s',0.01],
+      ['co',0.01,'border-left:2px solid var(--border-strong)'],['cu',0.1],['fe',1],['mn',1],['zn',1],['se',0.01],
+    ];
+
+    tr.appendChild(td0);
+    tr.appendChild(td1);
+    tr.appendChild(tdCost);
+    tr.appendChild(tdMin);
+    tr.appendChild(tdMax);
+
+    fields.forEach(([key, step, style]) => {
+      const td = document.createElement('td');
+      if (style) td.style.cssText = style;
+      const inp = document.createElement('input');
+      inp.type = 'number'; inp.value = ing[key]; inp.step = step||'0.1';
+      inp.onchange = e => updateIng(ing.id, key, +e.target.value);
+      td.appendChild(inp);
+      tr.appendChild(td);
+    });
+
+    // NPN checkbox
+    const tdNpn = document.createElement('td');
+    tdNpn.style.cssText = 'text-align:center;border-left:2px solid var(--border-strong)';
+    const cbx = document.createElement('input'); cbx.type = 'checkbox'; cbx.checked = ing.npn;
+    cbx.onchange = e => updateIng(ing.id, 'npn', e.target.checked);
+    tdNpn.appendChild(cbx);
+
+    // Del
+    const tdDel = document.createElement('td');
+    const delBtn = document.createElement('button'); delBtn.className='del-btn'; delBtn.textContent='×';
+    delBtn.title='Remove'; delBtn.onclick = () => deleteIng(ing.id);
+    tdDel.appendChild(delBtn);
+
+    tr.appendChild(tdNpn); tr.appendChild(tdDel);
+    tbody.appendChild(tr);
+  });
+}
+
+function markStale() {
+  // Collapse results so user knows they need to rerun
+  document.getElementById('results-section').classList.add('hidden');
+  document.getElementById('analyse-results').classList.add('hidden');
+  // Scroll ingredient table into view
+  document.querySelector('.ing-wrap').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function updateIng(id, key, val) {
+  const i=ingredients.find(x=>x.id===id);
+  if(i) i[key]=val;
+  markStale();
+}
+function toggleIng(id) {
+  const i=ingredients.find(x=>x.id===id); if(i) i.active=!i.active; renderTable();
+  if (!document.getElementById('analyse-body').classList.contains('hidden')) renderAnalyseInputs();
+  markStale();
+}
+function deleteIng(id) {
+  if(confirm('Remove this ingredient?')){
+    ingredients=ingredients.filter(x=>x.id!==id); renderTable();
+    if (!document.getElementById('analyse-body').classList.contains('hidden')) renderAnalyseInputs();
+    markStale();
+  }
+}
+
+function addIngredient() {
+  ingredients.push({
+    id:nextId++, name:'New feed', cost:300, dm:88, me:10.0, cp:12.0, fat:2.0, pufa:1.0,
+    ndf:40, adf:20, starch:20, rdp:8.0, udp:4.0,
+    lys:3.5, met:1.6, thr:3.2, trp:1.1, his:2.2,
+    ca:0.35, p:0.30, mg:0.15, na:0.03, k:0.60, s:0.15,
+    co:0.05, cu:5.0, fe:80, mn:25, zn:30, se:0.08,
+    npn:false, minInc:0, maxInc:99, active:true
+  });
+  renderTable();
+  document.querySelector('.ing-wrap').scrollTop = 99999;
+  markStale();
+}
+
+function addUrea() {
+  const existing = ingredients.find(i => i.name==='Urea' && i.npn);
+  if (existing) { existing.active=true; renderTable(); alert('Urea toggled on.'); markStale(); return; }
+  ingredients.push({
+    id:nextId++, name:'Urea', cost:900, dm:99, me:0, cp:281, fat:0, pufa:0,
+    ndf:0, adf:0, starch:0, rdp:281, udp:0,
+    lys:0, met:0, thr:0, trp:0, his:0,
+    ca:0, p:0, mg:0, na:0, k:0, s:0,
+    co:0, cu:0, fe:0, mn:0, zn:0, se:0,
+    npn:true, minInc:0, maxInc:0.3, active:true
+  });
+  renderTable();
+  document.querySelector('.ing-wrap').scrollTop = 99999;
+  markStale();
+}
+
+function g(id) { return parseFloat(document.getElementById(id).value)||0; }
+
+// ── Main tab switching ──
+function switchMainTab(tab, btn) {
+  document.querySelectorAll('#main-tab-ration, #main-tab-pellet').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('main-ration-tab').classList.toggle('hidden', tab !== 'ration');
+  document.getElementById('main-pellet-tab').classList.toggle('hidden', tab !== 'pellet-form');
+}
+
+// ── Pellet ingredient table ──
+function renderPelletTable() {
+  const tbody = document.getElementById('pellet-ing-tbody');
+  tbody.innerHTML = '';
+  pelletIngredients.forEach(ing => {
+    const tr = document.createElement('tr');
+    if (!ing.active) tr.style.opacity = '0.38';
+    const maxVal = ing.maxInc >= 99 ? '' : ing.maxInc;
+
+    const td0 = document.createElement('td'); td0.className = 'sticky-0';
+    const tog = document.createElement('button');
+    tog.className = 'toggle ' + (ing.active ? 'on' : 'off');
+    tog.onclick = () => { ing.active = !ing.active; renderPelletTable(); markPelletStale(); };
+    td0.appendChild(tog);
+
+    const td1 = document.createElement('td'); td1.className = 'sticky-1';
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text'; nameInput.value = ing.name; nameInput.style.width = '180px';
+    nameInput.onchange = e => { ing.name = e.target.value; markPelletStale(); };
+    td1.appendChild(nameInput);
+
+    // ── Sticky: cost, minInc, maxInc ──
+    const tdCost = document.createElement('td'); tdCost.className = 'sticky-2';
+    const costInp = document.createElement('input');
+    costInp.type='number'; costInp.value=ing.cost; costInp.step='1';
+    costInp.onchange = e => { ing.cost = +e.target.value; markPelletStale(); };
+    tdCost.appendChild(costInp);
+
+    const tdMin = document.createElement('td'); tdMin.className = 'sticky-3';
+    const minInp = document.createElement('input');
+    minInp.type='number'; minInp.value=ing.minInc; minInp.step='0.1'; minInp.min='0';
+    minInp.onchange = e => { ing.minInc = +e.target.value; };
+    tdMin.appendChild(minInp);
+
+    const tdMax = document.createElement('td'); tdMax.className = 'sticky-4';
+    const maxInp = document.createElement('input');
+    maxInp.type='number'; maxInp.value=maxVal; maxInp.step='0.1'; maxInp.placeholder='∞';
+    maxInp.onchange = e => { ing.maxInc = e.target.value===''?99:+e.target.value; };
+    tdMax.appendChild(maxInp);
+
+    const fields = [
+      ['dm',0.1,'border-left:2px solid var(--border-strong)'],['me',0.1],['cp',0.1],['fat',0.1],['pufa',0.1],
+      ['ndf',0.1,'border-left:2px solid var(--border-strong)'],['adf',0.1],['starch',0.1],
+      ['rdp',0.1,'border-left:2px solid var(--border-strong)'],['udp',0.1],
+      ['lys',0.1,'border-left:2px solid var(--border-strong)'],['met',0.1],['thr',0.1],['trp',0.1],['his',0.1],
+      ['ca',0.01,'border-left:2px solid var(--border-strong)'],['p',0.01],['mg',0.01],['na',0.01],['k',0.01],['s',0.01],
+    ];
+    tr.appendChild(td0); tr.appendChild(td1);
+    tr.appendChild(tdCost); tr.appendChild(tdMin); tr.appendChild(tdMax);
+    fields.forEach(([key, step, style]) => {
+      const td = document.createElement('td');
+      if (style) td.style.cssText = style;
+      const inp = document.createElement('input');
+      inp.type = 'number'; inp.value = ing[key]||0; inp.step = step||'0.1';
+      inp.onchange = e => { ing[key] = +e.target.value; markPelletStale(); };
+      td.appendChild(inp); tr.appendChild(td);
+    });
+
+    const tdNpn = document.createElement('td');
+    tdNpn.style.cssText = 'text-align:center;border-left:2px solid var(--border-strong)';
+    const cbx = document.createElement('input'); cbx.type = 'checkbox'; cbx.checked = ing.npn;
+    cbx.onchange = e => { ing.npn = e.target.checked; markPelletStale(); };
+    tdNpn.appendChild(cbx);
+
+    const tdDel = document.createElement('td');
+    const delBtn = document.createElement('button'); delBtn.className='del-btn'; delBtn.textContent='×';
+    delBtn.onclick = () => { if(confirm('Remove?')){ pelletIngredients=pelletIngredients.filter(x=>x.id!==ing.id); renderPelletTable(); } };
+    tdDel.appendChild(delBtn);
+
+    tr.appendChild(tdNpn); tr.appendChild(tdDel);
+    tbody.appendChild(tr);
+  });
+}
+
+function markPelletStale() {
+  document.getElementById('pellet-results').classList.add('hidden');
+}
+
+function addPelletIngredient() {
+  pelletIngredients.push({
+    id:pelletNextId++, name:'New feed', cost:300, dm:88, me:12.0, cp:20.0, fat:3.0, pufa:1.5,
+    ndf:20, adf:12, starch:30, rdp:12.0, udp:8.0,
+    lys:4.0, met:1.8, thr:3.5, trp:1.2, his:2.5,
+    ca:0.35, p:0.45, mg:0.15, na:0.05, k:0.60, s:0.18,
+    npn:false, minInc:0, maxInc:99, active:true
+  });
+  renderPelletTable();
+}
+
+function addPelletUrea() {
+  const existing = pelletIngredients.find(i => i.name==='Urea' && i.npn);
+  if (existing) { existing.active=true; renderPelletTable(); return; }
+  pelletIngredients.push({
+    id:pelletNextId++, name:'Urea', cost:900, dm:99, me:0, cp:281, fat:0, pufa:0,
+    ndf:0, adf:0, starch:0, rdp:281, udp:0,
+    lys:0, met:0, thr:0, trp:0, his:0,
+    ca:0, p:0, mg:0, na:0, k:0, s:0,
+    npn:true, minInc:0, maxInc:0.3, active:true
+  });
+  renderPelletTable();
+}
+
+// ── Pellet optimiser ──
+function pg(id) { return parseFloat(document.getElementById(id)?.value)||0; }
+
+function optimisePellet() {
+  const dm_min=pg('p_dm_min'), dm_max=pg('p_dm_max'), dm_tgt=pg('p_dm_tgt');
+  const me_min=pg('p_me_min'), me_max=pg('p_me_max'), me_tgt=pg('p_me_tgt');
+  const cp_min=pg('p_cp_min'), cp_max=pg('p_cp_max'), cp_tgt=pg('p_cp_tgt');
+  const ndf_min=0,             ndf_max=pg('p_ndf_max');
+  const fat_max=pg('p_fat_max');
+  const starch_min=pg('p_starch_min'), starch_max=pg('p_starch_max'), starch_tgt=pg('p_starch_tgt');
+  const ca_min=pg('p_ca_min'), ca_tgt=pg('p_ca_tgt');
+  const p_min=pg('p_p_min'),   p_tgt=pg('p_p_tgt');
+  const lys_min=pg('p_lys_min'), met_min=pg('p_met_min');
+
+  const active = pelletIngredients.filter(i => i.active);
+  if (active.length < 2) { alert('Enable at least 2 pellet ingredients.'); return; }
+
+  const dm_target = dm_tgt || (dm_min+dm_max)/2;
+  let x = active.map(i => Math.max(i.minInc, 0.05));
+  const xSum = x.reduce((a,b)=>a+b,0);
+  if (xSum>0) x = x.map(v=>v*dm_target/xSum);
+  const costPerKgDM = active.map(i=>(i.cost/1000)/(i.dm/100));
+
+  // ME treated as density (MJ/kg DM) in pellet formulator always
+  const meDMinEst = me_min;
+  const me_density_tgt = me_tgt;
+
+  function getNut(x) {
+    const totalDM = x.reduce((a,b)=>a+b,0);
+    if (totalDM<=0) return {};
+    let me=0,cp=0,fat=0,pufa=0,ndf=0,adf=0,starch=0,rdp=0,udp=0,ca=0,p=0,mg=0,na=0,k=0,s=0,cost=0;
+    let co=0,cu=0,fe=0,mn=0,zn=0,se=0;
+    let lys_a=0,met_a=0,thr_a=0,trp_a=0,his_a=0,npnKg=0;
+    x.forEach((xi,i)=>{
+      const ing=active[i], cpAbs=xi*(ing.cp/100);
+      me+=xi*ing.me; cp+=cpAbs; fat+=xi*(ing.fat/100); pufa+=xi*((ing.pufa||0)/100);
+      ndf+=xi*(ing.ndf/100); adf+=xi*(ing.adf/100); starch+=xi*(ing.starch/100);
+      rdp+=xi*(ing.rdp/100); udp+=xi*(ing.udp/100);
+      ca+=xi*(ing.ca/100); p+=xi*(ing.p/100); mg+=xi*(ing.mg/100);
+      na+=xi*(ing.na/100); k+=xi*(ing.k/100); s+=xi*(ing.s/100);
+      co+=xi*(ing.co||0); cu+=xi*(ing.cu||0); fe+=xi*(ing.fe||0);
+      mn+=xi*(ing.mn||0); zn+=xi*(ing.zn||0); se+=xi*(ing.se||0);
+      cost+=xi*costPerKgDM[i];
+      // Pure AA products (cp:0) — accumulate directly as kg DM × (aa%DM/100)
+      // Regular ingredients — accumulate as fraction of CP
+      if (ing.cp > 0) {
+        lys_a+=cpAbs*(ing.lys/100); met_a+=cpAbs*(ing.met/100);
+        thr_a+=cpAbs*(ing.thr/100); trp_a+=cpAbs*(ing.trp/100); his_a+=cpAbs*(ing.his/100);
+      } else {
+        lys_a+=xi*(ing.lys/100); met_a+=xi*(ing.met/100);
+        thr_a+=xi*(ing.thr/100); trp_a+=xi*(ing.trp/100); his_a+=xi*(ing.his/100);
+      }
+      if(ing.npn) npnKg+=xi;
+    });
+    const cpT=cp;
+    return {
+      totalDM, me:me/totalDM,
+      cp:(cp/totalDM)*100, fat:(fat/totalDM)*100, pufa:(pufa/totalDM)*100,
+      ndf:(ndf/totalDM)*100, adf:(adf/totalDM)*100, starch:(starch/totalDM)*100,
+      rdp:(rdp/totalDM)*100, udp:(udp/totalDM)*100,
+      ca:(ca/totalDM)*100, p:(p/totalDM)*100, mg:(mg/totalDM)*100,
+      na:(na/totalDM)*100, k:(k/totalDM)*100, s:(s/totalDM)*100,
+      co:co/totalDM, cu:cu/totalDM, fe:fe/totalDM, mn:mn/totalDM, zn:zn/totalDM, se:se/totalDM,
+      cost, lys:cpT>0?(lys_a/cpT)*100:0, met:cpT>0?(met_a/cpT)*100:0,
+      thr:cpT>0?(thr_a/cpT)*100:0, trp:cpT>0?(trp_a/cpT)*100:0,
+      his:cpT>0?(his_a/cpT)*100:0,
+      npnKg, npnPctDM:(npnKg/totalDM)*100,
+      cf:(adf/totalDM)*100*0.65, tdn:(me/totalDM)*5.8, negain:(me/totalDM)*0.062,
+    };
+  }
+  for (let iter=0; iter<1200; iter++) {
+    const nut=getNut(x);
+    const tDM=Math.max(nut.totalDM,0.1);
+    const grad=x.map((_,i)=>{
+      let g2=costPerKgDM[i];
+      // DM bounds
+      if(nut.totalDM<dm_min) g2-=2.8; if(nut.totalDM>dm_max) g2+=2.8;
+      // ME — push toward minimum
+      if(nut.me<me_min) g2+=(active[i].me<nut.me?0.7:-0.9)*2.5;
+      // CP — proportional penalty above max so overshoot is costly
+      if(nut.cp<cp_min){if(active[i].cp>nut.cp)g2-=1.8;else g2+=0.6;}
+      if(nut.cp>cp_max){
+        const overshoot=nut.cp-cp_max;
+        if(active[i].cp>nut.cp) g2+=1.5+overshoot*0.15; // strong push on high-CP ingredients
+        else g2-=0.3; // mild pull toward low-CP ingredients
+      }
+      // Fat, NDF, starch hard limits
+      if(fat_max<99&&nut.fat>fat_max){if(active[i].fat>nut.fat)g2+=1.2;}
+      if(ndf_max<99&&nut.ndf>ndf_max){if(active[i].ndf>nut.ndf)g2+=1.2;}
+      if(starch_min>0&&nut.starch<starch_min){if(active[i].starch>nut.starch)g2-=1.0;}
+      if(starch_max<99&&nut.starch>starch_max){if(active[i].starch>nut.starch)g2+=1.4;}
+      // Minerals
+      if(ca_min>0&&nut.ca<ca_min){if(active[i].ca>nut.ca)g2-=1.0;}
+      if(p_min>0&&nut.p<p_min){if(active[i].p>nut.p)g2-=0.8;}
+      if(lys_min>0&&nut.lys<lys_min){if(active[i].lys>nut.lys)g2-=1.2;}
+      if(met_min>0&&nut.met<met_min){if(active[i].met>nut.met)g2-=1.2;}
+      // Soft target pulls (only active when hard constraint is satisfied)
+      if(me_tgt&&nut.me>=me_min) g2+=(active[i].me>nut.me?-0.3:0.3)*Math.min(Math.abs(me_tgt-nut.me)*0.3,0.5);
+      if(cp_tgt&&nut.cp>=cp_min&&nut.cp<=cp_max) g2+=(active[i].cp>nut.cp?-0.3:0.3)*Math.min(Math.abs(cp_tgt-nut.cp)*0.3,0.5);
+      if(starch_tgt>0&&nut.starch>=starch_min&&nut.starch<=starch_max) g2+=(active[i].starch>nut.starch?-0.25:0.25)*Math.min(Math.abs(starch_tgt-nut.starch)*0.2,0.4);
+      if(ca_tgt) g2+=(active[i].ca>nut.ca?-0.2:0.2)*Math.min(Math.abs(ca_tgt-nut.ca)*0.3,0.3);
+      return g2;
+    });
+    x=x.map((xi,i)=>{
+      let nx=xi-lr*grad[i];
+      nx=Math.max(active[i].minInc,nx);
+      if(active[i].maxInc<99) nx=Math.min(active[i].maxInc,nx);
+      return Math.max(0,nx);
+    });
+    if(iter%100===99) lr*=0.80;
+  }
+
+  const nut=getNut(x);
+  const pelletCost=nut.totalDM>0?(nut.cost/nut.totalDM)*1000:0;
+
+  document.getElementById('pm-cost').textContent='$'+Math.round(pelletCost);
+  document.getElementById('pm-dm').textContent=nut.totalDM.toFixed(1);
+  document.getElementById('pm-me').textContent=nut.me.toFixed(1);
+  document.getElementById('pm-cp').textContent=nut.cp.toFixed(1)+'%';
+
+  // Inclusion table
+  const tbody=document.getElementById('pellet-ration-body');
+  tbody.innerHTML='';
+  x.forEach((xi,i)=>{
+    if(xi<0.005) return;
+    const pct=(xi/nut.totalDM*100).toFixed(1);
+    const ingPrice='$'+Math.round(costPerKgDM[i]*1000);
+    const contrib='$'+Math.round((xi*costPerKgDM[i]/nut.totalDM)*1000);
+    const npnTag=active[i].npn?' <span class="badge badge-npn">NPN</span>':'';
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${active[i].name}${npnTag}</td><td>${xi.toFixed(3)}</td><td>${pct}%</td><td>${ingPrice}</td><td>${contrib}</td>`;
+    tbody.appendChild(tr);
+  });
+  const totTr=document.createElement('tr'); totTr.className='total-row';
+  totTr.innerHTML=`<td>Total</td><td>${nut.totalDM.toFixed(3)}</td><td>100%</td><td>—</td><td>$${Math.round(pelletCost)}</td>`;
+  tbody.appendChild(totTr);
+
+  // NPN / PUFA alerts
+  const npnEl=document.getElementById('pellet-npn-block'); npnEl.innerHTML='';
+  if(nut.npnKg>0.001){
+    const pDM=nut.npnPctDM;
+    const cls=pDM<=0.8?'alert-ok':pDM<=1.2?'alert-warn':'alert-fail';
+    const lvl=pDM<=0.8?'Low':pDM<=1.2?'Moderate':'High — toxicity risk';
+    npnEl.innerHTML=`<div class="alert ${cls}" style="margin-bottom:8px"><strong>NPN present</strong> — ${pDM.toFixed(2)}% DM. Rumen NH₃ load: <strong>${lvl}</strong>.</div>`;
+  }
+  const pufaEl=document.getElementById('pellet-pufa-block'); pufaEl.innerHTML='';
+  const pufaCls=nut.pufa<2.5?'alert-ok':nut.pufa<4.0?'alert-warn':'alert-fail';
+  const pufaLvl=nut.pufa<2.5?'Low':nut.pufa<4.0?'Moderate':'High — rumen fat stress risk';
+  pufaEl.innerHTML=`<div class="alert ${pufaCls}" style="margin-bottom:8px"><strong>PUFA load (est.) ${nut.pufa.toFixed(2)}% DM</strong> — ${pufaLvl}.</div>`;
+
+  // Constraints check
+  const checks=[
+    {label:'DM intake',val:nut.totalDM,min:dm_min,max:dm_max,tgt:dm_tgt,unit:'kg'},
+    {label:'ME density',val:nut.me,    min:me_min, max:me_max, tgt:me_tgt,unit:'MJ/kg'},
+    {label:'CP',        val:nut.cp,    min:cp_min, max:cp_max, tgt:cp_tgt,unit:'%'},
+    {label:'NDF',       val:nut.ndf,   min:0,      max:ndf_max,tgt:0,     unit:'%'},
+    {label:'Starch',    val:nut.starch,min:starch_min,max:starch_max,tgt:starch_tgt,unit:'%'},
+    {label:'Fat',       val:nut.fat,   min:0,      max:fat_max,tgt:0,     unit:'%'},
+    {label:'Ca',        val:nut.ca,    min:ca_min, max:99,     tgt:ca_tgt,unit:'%'},
+    {label:'P',         val:nut.p,     min:p_min,  max:99,     tgt:p_tgt, unit:'%'},
+    ...(lys_min>0?[{label:'Lysine',val:nut.lys,min:lys_min,max:99,tgt:0,unit:'%CP'}]:[]),
+    ...(met_min>0?[{label:'Methionine',val:nut.met,min:met_min,max:99,tgt:0,unit:'%CP'}]:[]),
+  ];
+
+  const allOk=checks.every(c=>{
+    const hasMin=c.min>0,hasMax=c.max<99;
+    return(!hasMin||c.val>=c.min)&&(!hasMax||c.val<=c.max);
+  });
+
+  const failed=checks.filter(c=>{
+    const hasMin=c.min>0,hasMax=c.max<99;
+    return(hasMin&&c.val<c.min)||(hasMax&&c.val>c.max);
+  });
+
+  document.getElementById('pellet-result-status').innerHTML=allOk
+    ? '<div class="alert alert-ok">All constraints satisfied — least-cost pellet found.</div>'
+    : '<div class="alert alert-fail"><strong>Constraints not met:</strong> '+
+      failed.map(c=>{
+        const dir=c.val<c.min?c.val.toFixed(2)+' < min '+c.min.toFixed(2):c.val.toFixed(2)+' > max '+c.max.toFixed(2);
+        return c.label+' ('+dir+' '+c.unit+')';
+      }).join(' · ')+'</div>';
+
+  // Output tables
+  function pOutRow(label,val,unit,min,max,tgt,dec) {
+    dec=dec===undefined?2:dec;
+    const sv=(typeof val==='number'&&isFinite(val))?val:0;
+    const v=sv.toFixed(dec);
+    let cls='',tgtStr='';
+    if(min!==undefined&&max!==undefined&&min!==null&&max!==null&&isFinite(min)&&isFinite(max)){
+      const ok=(min===0||sv>=min)&&(max>=99||sv<=max);
+      cls=ok?'ok':'fail';
+      if(tgt>0){tgtStr='<span style="color:var(--blue);font-weight:500">'+tgt.toFixed(dec)+'</span>';}
+      else if(min>0||max<99){tgtStr=(min>0?min.toFixed(dec):'')+(min>0&&max<99?' – ':'')+(max<99?max.toFixed(dec):'');}
+    }
+    return `<tr><td>${label}</td><td class="unit">${unit}</td><td class="${cls}">${v}</td><td style="font-size:10px;color:var(--text-faint)">${tgtStr}</td></tr>`;
+  }
+  function pSHead(l){return `<tr class="section-head"><td colspan="4">${l}</td></tr>`;}
+
+  document.getElementById('pellet-out-proximate').innerHTML=`
+    <thead><tr><th>Nutrient</th><th class="center">Unit</th><th>Value</th><th>Target / range</th></tr></thead>
+    <tbody>
+    ${pSHead('Proximate')}
+    ${pOutRow('CP',nut.cp,'%',cp_min,cp_max,cp_tgt)}
+    ${pOutRow('NDF',nut.ndf,'%',0,ndf_max,0)}
+    ${pOutRow('Fat',nut.fat,'%',0,fat_max,0)}
+    ${pOutRow('PUFA (est.)',nut.pufa,'%',null,null,0)}
+    ${pOutRow('Starch',nut.starch,'%',starch_min,starch_max,starch_tgt)}
+    ${pSHead('Energy')}
+    ${pOutRow('ME density',nut.me,'MJ/kg DM',me_min,me_max,me_tgt)}
+    ${pOutRow('NEgain (est.)',nut.negain,'MJ/kg DM',null,null,0)}
+    ${pSHead('Intake & cost')}
+    ${pOutRow('DM rate',nut.totalDM,'kg/hd/day',dm_min,dm_max,dm_tgt)}
+    ${pOutRow('Cost ($/t DM)','$'+Math.round(pelletCost),'',null,null,0,0)}
+    </tbody>`;
+
+  document.getElementById('pellet-out-minerals').innerHTML=`
+    <thead><tr><th>Nutrient</th><th class="center">Unit</th><th>Value</th><th>Target / range</th></tr></thead>
+    <tbody>
+    ${pSHead('Protein fractions')}
+    ${pOutRow('RDP',nut.rdp,'%DM',0,99,0)}
+    ${pOutRow('UDP',nut.udp,'%DM',0,99,0)}
+    ${pSHead('Minerals')}
+    ${pOutRow('Ca',nut.ca,'%DM',ca_min,99,ca_tgt)}
+    ${pOutRow('P',nut.p,'%DM',p_min,99,p_tgt)}
+    ${pOutRow('Mg',nut.mg,'%DM',null,null,0)}
+    ${pOutRow('Na',nut.na,'%DM',null,null,0)}
+    ${pOutRow('K',nut.k,'%DM',null,null,0)}
+    ${pOutRow('S',nut.s,'%DM',null,null,0)}
+    ${pSHead('Trace minerals')}
+    ${pOutRow('Co',nut.co,'mg/kg',null,null,2)}
+    ${pOutRow('Cu',nut.cu,'mg/kg',null,null,1)}
+    ${pOutRow('Fe',nut.fe,'mg/kg',null,null,0)}
+    ${pOutRow('Mn',nut.mn,'mg/kg',null,null,0)}
+    ${pOutRow('Zn',nut.zn,'mg/kg',null,null,0)}
+    ${pOutRow('Se',nut.se,'mg/kg',null,null,2)}
+    </tbody>`;
+
+  document.getElementById('pellet-out-aa').innerHTML=`
+    <thead><tr><th>Amino acid</th><th class="center">Unit</th><th>Value</th><th>Target / range</th></tr></thead>
+    <tbody>
+    ${pSHead('% of CP')}
+    ${pOutRow('Lysine',nut.lys,'%CP',lys_min,99,0)}
+    ${pOutRow('Methionine',nut.met,'%CP',met_min,99,0)}
+    ${pOutRow('Threonine',nut.thr,'%CP',0,99,0)}
+    ${pOutRow('Tryptophan',nut.trp,'%CP',0,99,0)}
+    ${pOutRow('Histidine',nut.his,'%CP',0,99,0)}
+    ${pSHead('g/kg DM')}
+    ${pOutRow('Lys',nut.lys*nut.cp/10,'g/kg',null,null,0)}
+    ${pOutRow('Met',nut.met*nut.cp/10,'g/kg',null,null,0)}
+    </tbody>`;
+
+  const cRows2=checks.map(c=>{
+    const hasMin=c.min>0,hasMax=c.max<99;
+    if(!hasMin&&!hasMax) return `<tr><td>${c.label}</td><td class="unit">${c.unit}</td><td>${isFinite(c.val)?c.val.toFixed(2):'—'}</td><td class="na">—</td><td class="na">—</td></tr>`;
+    const ok=(!hasMin||c.val>=c.min)&&(!hasMax||c.val<=c.max);
+    const tgtDisp=c.tgt>0?`<span style="color:var(--blue);font-weight:500">${c.tgt.toFixed(2)}</span>`:'<span style="color:var(--text-faint)">—</span>';
+    return `<tr><td>${c.label}</td><td class="unit">${c.unit}</td><td class="${ok?'ok':'fail'}">${isFinite(c.val)?c.val.toFixed(2):'—'}</td><td>${tgtDisp}</td><td><span class="badge ${ok?'badge-ok':'badge-fail'}">${ok?'OK':'FAIL'}</span></td></tr>`;
+  }).join('');
+  document.getElementById('pellet-out-constraints').innerHTML=`
+    <thead><tr><th>Constraint</th><th class="center">Unit</th><th>Value</th><th>Target</th><th>Status</th></tr></thead>
+    <tbody>${cRows2}</tbody>`;
+
+  document.getElementById('pellet-results').classList.remove('hidden');
+  document.getElementById('pellet-results').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// ── Pellet save / load / save-as-default ──
+function savePelletLibrary() {
+  const data={version:1,savedAt:new Date().toISOString(),pelletIngredients};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='pellet-library.json'; a.click(); URL.revokeObjectURL(a.href);
+}
+
+function loadPelletLibrary(event) {
+  const file=event.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try {
+      const data=JSON.parse(e.target.result);
+      const arr=data.pelletIngredients||data.ingredients;
+      if(arr&&Array.isArray(arr)){
+        pelletIngredients=arr;
+        pelletNextId=Math.max(...pelletIngredients.map(i=>i.id))+1;
+        renderPelletTable();
+        alert('Loaded '+pelletIngredients.length+' pellet ingredients from "'+file.name+'"');
+      } else { alert('Invalid file format.'); }
+    } catch(err){ alert('Parse error: '+err.message); }
+  };
+  reader.readAsText(file); event.target.value='';
+}
+
+function savePelletAsDefault() {
+  const tag=document.getElementById('embedded-pellet-ingredients');
+  if(tag) tag.textContent=JSON.stringify(pelletIngredients);
+  const html='<!DOCTYPE html>\n'+document.documentElement.outerHTML;
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='ration-formulator-v5.html'; a.click(); URL.revokeObjectURL(a.href);
+}
+
+// ── Analyse existing ration ──
+
+function toggleAnalyse() {
+  const body = document.getElementById('analyse-body');
+  const btn = document.getElementById('analyse-toggle-btn');
+  const hidden = body.classList.toggle('hidden');
+  btn.textContent = hidden ? '+ Expand' : '− Collapse';
+  if (!hidden) renderAnalyseInputs();
+}
+
+function renderAnalyseInputs() {
+  const tbody = document.getElementById('analyse-tbody');
+  tbody.innerHTML = '';
+  const active = ingredients.filter(i => i.active);
+  active.forEach(ing => {
+    const tr = document.createElement('tr');
+    const asFedId = 'af_' + ing.id;
+    const dmVal = (parseFloat(document.getElementById(asFedId) ? document.getElementById(asFedId).value : 0) * ing.dm / 100).toFixed(2);
+    tr.innerHTML = `
+      <td style="font-size:13px">${ing.name}</td>
+      <td><input type="number" id="${asFedId}" value="0" min="0" step="0.1"
+        style="width:80px;padding:6px 8px;font-size:14px;border:1px solid var(--border);border-radius:4px;background:var(--bg);font-family:var(--mono);text-align:right"
+        oninput="updateDMCell(${ing.id})"></td>
+      <td id="dm_${ing.id}" style="font-family:var(--mono);font-size:13px;text-align:right;color:var(--text-muted)">0.00</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function updateDMCell(id) {
+  const ing = ingredients.find(i => i.id === id);
+  if (!ing) return;
+  const asFed = parseFloat(document.getElementById('af_' + id).value) || 0;
+  const dm = (asFed * ing.dm / 100).toFixed(2);
+  const cell = document.getElementById('dm_' + id);
+  if (cell) cell.textContent = dm;
+}
+
+function analyseRation() {
+  const active = ingredients.filter(i => i.active);
+  const entries = active.map(ing => {
+    const asFed = parseFloat(document.getElementById('af_' + ing.id)?.value) || 0;
+    const kgDM = asFed * (ing.dm / 100);
+    return { ing, asFed, kgDM };
+  }).filter(e => e.kgDM > 0.001);
+
+  if (entries.length < 1) {
+    alert('Enter at least one ingredient quantity to analyse.');
+    return;
+  }
+
+  const totalDM = entries.reduce((a, e) => a + e.kgDM, 0);
+  const totalAF = entries.reduce((a, e) => a + e.asFed, 0);
+  const costPerKgDM = ing => (ing.cost / 1000) / (ing.dm / 100);
+
+  // Accumulate nutrients
+  let me=0,cp=0,fat=0,pufa=0,ndf=0,adf=0,starch=0,rdp=0,udp=0;
+  let ca=0,p=0,mg=0,na=0,k=0,s=0,co=0,cu=0,fe=0,mn=0,zn=0,se=0,cost=0;
+  let lys_a=0,met_a=0,thr_a=0,trp_a=0,his_a=0,npnKg=0;
+
+  entries.forEach(({ing, kgDM}) => {
+    const cpAbs = kgDM * (ing.cp / 100);
+    me    += kgDM * ing.me;
+    cp    += cpAbs;
+    fat   += kgDM * (ing.fat / 100);
+    pufa  += kgDM * ((ing.pufa||0) / 100);
+    ndf   += kgDM * (ing.ndf / 100);
+    adf   += kgDM * (ing.adf / 100);
+    starch+= kgDM * (ing.starch / 100);
+    rdp   += kgDM * (ing.rdp / 100);
+    udp   += kgDM * (ing.udp / 100);
+    ca    += kgDM * (ing.ca / 100);
+    p     += kgDM * (ing.p / 100);
+    mg    += kgDM * (ing.mg / 100);
+    na    += kgDM * (ing.na / 100);
+    k     += kgDM * (ing.k / 100);
+    s     += kgDM * (ing.s / 100);
+    co    += kgDM * (ing.co || 0);
+    cu    += kgDM * (ing.cu || 0);
+    fe    += kgDM * (ing.fe || 0);
+    mn    += kgDM * (ing.mn || 0);
+    zn    += kgDM * (ing.zn || 0);
+    se    += kgDM * (ing.se || 0);
+    cost  += kgDM * costPerKgDM(ing);
+    lys_a += cpAbs * (ing.lys / 100);
+    met_a += cpAbs * (ing.met / 100);
+    thr_a += cpAbs * (ing.thr / 100);
+    trp_a += cpAbs * (ing.trp / 100);
+    his_a += cpAbs * (ing.his / 100);
+    if (ing.npn) npnKg += kgDM;
+  });
+
+  const nut = {
+    totalDM, me: me/totalDM,
+    cp: (cp/totalDM)*100, fat: (fat/totalDM)*100, pufa: (pufa/totalDM)*100,
+    ndf: (ndf/totalDM)*100, adf: (adf/totalDM)*100, starch: (starch/totalDM)*100,
+    rdp: (rdp/totalDM)*100, udp: (udp/totalDM)*100,
+    ca: (ca/totalDM)*100, p: (p/totalDM)*100, mg: (mg/totalDM)*100,
+    na: (na/totalDM)*100, k: (k/totalDM)*100, s: (s/totalDM)*100,
+    co: co/totalDM, cu: cu/totalDM, fe: fe/totalDM,
+    mn: mn/totalDM, zn: zn/totalDM, se: se/totalDM,
+    cost,
+    lys: cp>0?(lys_a/cp)*100:0, met: cp>0?(met_a/cp)*100:0,
+    thr: cp>0?(thr_a/cp)*100:0, trp: cp>0?(trp_a/cp)*100:0,
+    his: cp>0?(his_a/cp)*100:0,
+    cf: (adf/totalDM)*100 * 0.65,
+    tdn: (me/totalDM) * 5.8,
+    negain: (me/totalDM) * 0.062,
+    ash: Math.max(0, 100 - (cp/totalDM*100) - (fat/totalDM*100) - (ndf/totalDM*100) - (starch/totalDM*100) - 3),
+    pelletCost: (cost/totalDM)*1000,
+  };
+
+  // Headline metrics
+  const pelletCost = Math.round(nut.pelletCost);
+  if (currentMode === 'pellet') {
+    document.getElementById('am-cost').textContent = '$' + pelletCost;
+    document.getElementById('am-cost-unit').textContent = '$/tonne DM';
+    document.getElementById('am-cost-col').textContent = '$/tonne DM';
+  } else {
+    document.getElementById('am-cost').textContent = '$' + nut.cost.toFixed(2);
+    document.getElementById('am-cost-unit').textContent = '$/head/day';
+    document.getElementById('am-cost-col').textContent = '$/head/day';
+  }
+  document.getElementById('am-dm').textContent = totalDM.toFixed(1);
+  document.getElementById('am-me').textContent = nut.me.toFixed(1);
+  document.getElementById('am-cp').textContent = nut.cp.toFixed(1) + '%';
+
+  // Inclusion summary table
+  const atbody = document.getElementById('analyse-ration-body');
+  atbody.innerHTML = '';
+  document.getElementById('am-cost-col').textContent = currentMode==='pellet' ? '$/t contrib.' : '$/hd/day contrib.';
+  entries.forEach(({ing, asFed, kgDM}) => {
+    const pct = (kgDM / totalDM * 100).toFixed(1);
+    const ingPricePerTDM = '$' + Math.round(costPerKgDM(ing) * 1000);
+    const ingContrib = currentMode === 'pellet'
+      ? '$' + Math.round((kgDM * costPerKgDM(ing) / totalDM) * 1000)
+      : '$' + (kgDM * costPerKgDM(ing)).toFixed(2);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${ing.name}</td><td>${asFed.toFixed(2)}</td><td>${kgDM.toFixed(2)}</td><td>${pct}%</td><td>${ingPricePerTDM}</td><td>${ingContrib}</td>`;
+    atbody.appendChild(tr);
+  });
+  const totTr = document.createElement('tr'); totTr.className = 'total-row';
+  const totCost = currentMode === 'pellet' ? '$' + pelletCost : '$' + nut.cost.toFixed(2);
+  totTr.innerHTML = `<td>Total</td><td>${totalAF.toFixed(2)}</td><td>${totalDM.toFixed(2)}</td><td>100%</td><td>—</td><td>${totCost}</td>`;
+  atbody.appendChild(totTr);
+
+  // Reuse the outRow / sectionHead helpers from optimise context
+  function outRow(label, val, unit, min, max, decimals=2, forceNA=false) {
+    if (forceNA) return `<tr><td>${label}</td><td class="unit">${unit}</td><td class="na">—</td><td></td></tr>`;
+    const safeVal = (typeof val==='number' && isFinite(val)) ? val : 0;
+    const v = safeVal.toFixed(decimals);
+    let cls='', tgt='';
+    if (min!==undefined && max!==undefined && min!==null && max!==null && isFinite(min) && isFinite(max)) {
+      const ok = (min===0||safeVal>=min) && (max>=99||safeVal<=max);
+      cls = ok ? 'ok' : 'fail';
+      if (min>0||max<99) tgt = (min>0?min.toFixed(decimals):'') + (min>0&&max<99?' – ':'') + (max<99?max.toFixed(decimals):'');
+    }
+    return `<tr><td>${label}</td><td class="unit">${unit}</td><td class="${cls}">${v}</td><td style="font-size:10px;color:var(--text-faint)">${tgt}</td></tr>`;
+  }
+  function sHead(label) { return `<tr class="section-head"><td colspan="4">${label}</td></tr>`; }
+
+  // Get current constraints for comparison
+  const dm_min=g('dm_min'),dm_max=g('dm_max'),me_min=g('me_min'),me_max=g('me_max');
+  const cp_min=g('cp_min'),cp_max=g('cp_max'),ndf_min=g('ndf_min'),ndf_max=g('ndf_max');
+  const adf_min=g('adf_min'),adf_max=g('adf_max'),starch_min=g('starch_min'),starch_max=g('starch_max');
+  const fat_min=g('fat_min'),fat_max=g('fat_max'),rdp_min=g('rdp_min'),rdp_max=g('rdp_max');
+  const udp_min=g('udp_min'),udp_max=g('udp_max'),ca_min=g('ca_min'),ca_max=g('ca_max');
+  const p_min=g('p_min'),p_max=g('p_max'),mg_min=g('mg_min'),mg_max=g('mg_max');
+  const na_min=g('na_min'),na_max=g('na_max'),k_min=g('k_min'),k_max=g('k_max');
+  const s_min=g('s_min'),s_max=g('s_max');
+  const lys_min=g('lys_min'),lys_max=g('lys_max'),met_min=g('met_min'),met_max=g('met_max');
+  const thr_min=g('thr_min'),thr_max=g('thr_max'),trp_min=g('trp_min'),trp_max=g('trp_max');
+  const his_min=g('his_min'),his_max=g('his_max');
+
+  // ME density bounds local to analyseRation
+  const safeTDM = Math.max(totalDM, 0.1);
+  const meDMin = currentMode==='pellet' ? me_min : me_min/safeTDM;
+  const meDMax = currentMode==='pellet' ? me_max : me_max/safeTDM;
+
+  document.getElementById('am-proximate').innerHTML = `
+    <thead><tr><th>Nutrient</th><th class="center">Unit</th><th>Value</th><th>Target</th></tr></thead>
+    <tbody>
+    ${sHead('Proximate')}
+    ${outRow('Protein (CP)',nut.cp,'%',cp_min,cp_max)}
+    ${outRow('NDF',nut.ndf,'%',ndf_min,ndf_max)}
+    ${outRow('ADF',nut.adf,'%',adf_min<1?0:adf_min,adf_max)}
+    ${outRow('CF (est.)',nut.cf,'%')}
+    ${outRow('Fat',nut.fat,'%',fat_min,fat_max)}
+    ${outRow('PUFA (est.)',nut.pufa,'%DM',null,null,2)}
+    ${outRow('Starch',nut.starch,'%',starch_min,starch_max)}
+    ${outRow('Ash (est.)',nut.ash,'%')}
+    ${sHead('Energy')}
+    ${outRow('ME density',nut.me,'MJ/kg DM',meDMin,meDMax)}
+    ${currentMode==='tmr' ? outRow('ME total',nut.me*totalDM,'MJ/head/day',me_min,me_max,1) : ''}
+    ${outRow('NEgain (est.)',nut.negain,'MJ/kg DM')}
+    ${outRow('TDN (est.)',nut.tdn,'%',null,null,1)}
+    ${sHead('Intake & cost')}
+    ${outRow('DM intake',totalDM,'kg/hd/day',dm_min,dm_max)}
+    ${outRow('Cost (head/day)','$'+nut.cost.toFixed(2),'')}
+    ${outRow('Cost ($/t DM)','$'+pelletCost,'')}
+    </tbody>`;
+
+  document.getElementById('am-minerals').innerHTML = `
+    <thead><tr><th>Nutrient</th><th class="center">Unit</th><th>Value</th><th>Target</th></tr></thead>
+    <tbody>
+    ${sHead('Protein fractions')}
+    ${outRow('RDP',nut.rdp,'%DM',rdp_min,rdp_max)}
+    ${outRow('UDP',nut.udp,'%DM',udp_min,udp_max)}
+    ${sHead('Macro minerals')}
+    ${outRow('Ca',nut.ca,'%DM',ca_min,ca_max<99?ca_max:99)}
+    ${outRow('P',nut.p,'%DM',p_min,p_max<99?p_max:99)}
+    ${outRow('Mg',nut.mg,'%DM',mg_min,mg_max<99?mg_max:99)}
+    ${outRow('Na',nut.na,'%DM',na_min,na_max<99?na_max:99)}
+    ${outRow('K',nut.k,'%DM',k_min,k_max<99?k_max:99)}
+    ${outRow('S',nut.s,'%DM',s_min,s_max<99?s_max:99)}
+    ${sHead('Trace minerals')}
+    ${outRow('Co',nut.co,'mg/kg',null,null,2)}
+    ${outRow('Cu',nut.cu,'mg/kg',null,null,1)}
+    ${outRow('Fe',nut.fe,'mg/kg',null,null,0)}
+    ${outRow('Mn',nut.mn,'mg/kg',null,null,0)}
+    ${outRow('Zn',nut.zn,'mg/kg',null,null,0)}
+    ${outRow('Se',nut.se,'mg/kg',null,null,2)}
+    </tbody>`;
+
+  document.getElementById('am-aa').innerHTML = `
+    <thead><tr><th>Amino acid</th><th class="center">Unit</th><th>Value</th><th>Target</th></tr></thead>
+    <tbody>
+    ${sHead('% of CP')}
+    ${outRow('Lysine',nut.lys,'%CP',lys_min,lys_max||99)}
+    ${outRow('Methionine',nut.met,'%CP',met_min,met_max||99)}
+    ${outRow('Threonine',nut.thr,'%CP',thr_min,thr_max||99)}
+    ${outRow('Tryptophan',nut.trp,'%CP',trp_min,trp_max||99)}
+    ${outRow('Histidine',nut.his,'%CP',his_min,his_max||99)}
+    ${sHead('g/kg DM')}
+    ${outRow('Lys',nut.lys*nut.cp/10,'g/kg',null,null,2)}
+    ${outRow('Met',nut.met*nut.cp/10,'g/kg',null,null,2)}
+    ${outRow('Thr',nut.thr*nut.cp/10,'g/kg',null,null,2)}
+    ${outRow('Trp',nut.trp*nut.cp/10,'g/kg',null,null,2)}
+    ${outRow('His',nut.his*nut.cp/10,'g/kg',null,null,2)}
+    </tbody>`;
+
+  // vs requirements check
+  const checks = [
+    {label:'DM intake',val:totalDM,min:dm_min,max:dm_max,unit:'kg'},
+    {label:'ME density',val:nut.me,min:meDMin,max:meDMax,unit:'MJ/kg'},
+    {label:'CP',val:nut.cp,min:cp_min,max:cp_max,unit:'%'},
+    {label:'NDF',val:nut.ndf,min:ndf_min,max:ndf_max,unit:'%'},
+    {label:'Fat',val:nut.fat,min:fat_min,max:fat_max,unit:'%'},
+    {label:'Ca',val:nut.ca,min:ca_min,max:ca_max<99?ca_max:99,unit:'%'},
+    {label:'P',val:nut.p,min:p_min,max:p_max<99?p_max:99,unit:'%'},
+    ...(lys_min>0?[{label:'Lysine',val:nut.lys,min:lys_min,max:lys_max||99,unit:'%CP'}]:[]),
+    ...(met_min>0?[{label:'Methionine',val:nut.met,min:met_min,max:met_max||99,unit:'%CP'}]:[]),
+    ...(thr_min>0?[{label:'Threonine',val:nut.thr,min:thr_min,max:thr_max||99,unit:'%CP'}]:[]),
+    ...(trp_min>0?[{label:'Tryptophan',val:nut.trp,min:trp_min,max:trp_max||99,unit:'%CP'}]:[]),
+    ...(his_min>0?[{label:'Histidine',val:nut.his,min:his_min,max:his_max||99,unit:'%CP'}]:[]),
+  ];
+
+  const cRows = checks.map(c => {
+    const hasMin=c.min>0, hasMax=c.max<99;
+    if (!hasMin&&!hasMax) return `<tr><td>${c.label}</td><td class="unit">${c.unit}</td><td>${c.val.toFixed(2)}</td><td class="na">—</td></tr>`;
+    const ok = (!hasMin||c.val>=c.min) && (!hasMax||c.val<=c.max);
+    return `<tr><td>${c.label}</td><td class="unit">${c.unit}</td><td class="${ok?'ok':'fail'}">${c.val.toFixed(2)}</td><td><span class="badge ${ok?'badge-ok':'badge-fail'}">${ok?'OK':'FAIL'}</span></td></tr>`;
+  }).join('');
+
+  document.getElementById('am-constraints').innerHTML = `
+    <thead><tr><th>Constraint</th><th class="center">Unit</th><th>Value</th><th>Status</th></tr></thead>
+    <tbody>${cRows}</tbody>`;
+
+  // PUFA traffic light for analyse mode
+  const amPufa = nut.pufa;
+  let amPufaCls, amPufaLvl, amPufaAdv;
+  if (amPufa < 2.5) {
+    amPufaCls='alert-ok'; amPufaLvl='Low';
+    amPufaAdv='Estimated PUFA load is within safe range.';
+  } else if (amPufa < 4.0) {
+    amPufaCls='alert-warn'; amPufaLvl='Moderate';
+    amPufaAdv='Approaching biohydrogenation capacity. Monitor high-PUFA ingredients.';
+  } else {
+    amPufaCls='alert-fail'; amPufaLvl='High — rumen fat stress risk';
+    amPufaAdv='Likely exceeds rumen biohydrogenation capacity. Risk of milk fat depression. Reduce high-PUFA ingredients or use protected fat.';
+  }
+  // Insert PUFA alert before the output grid
+  const amGrid = document.querySelector('#analyse-results .output-grid');
+  let existingPufa = document.getElementById('am-pufa-alert');
+  if (!existingPufa) {
+    existingPufa = document.createElement('div');
+    existingPufa.id = 'am-pufa-alert';
+    amGrid.parentNode.insertBefore(existingPufa, amGrid);
+  }
+  existingPufa.innerHTML = `<div class="alert ${amPufaCls}" style="margin-bottom:10px"><strong>PUFA load (est.) ${amPufa.toFixed(2)}% DM</strong> — ${amPufaLvl}. ${amPufaAdv}</div>`;
+
+  document.getElementById('analyse-results').classList.remove('hidden');
+  document.getElementById('analyse-results').scrollIntoView({behavior:'smooth', block:'start'});
+
+  // Build gap spec after a tick so DOM is visible
+  setTimeout(() => buildGapSpec(nut, totalDM), 50);
+}
+
+// Store last analysed nut for gap spec recalc
+let _lastAnalysedNut = null;
+let _lastAnalysedDM = 0;
+
+function buildGapSpec(nut, totalDM) {
+  _lastAnalysedNut = nut;
+  _lastAnalysedDM = totalDM;
+
+  // Derive DM gap from requirements panel — how much DM still needed beyond existing ration
+  const dmTgt = g('dm_tgt') || (g('dm_min') + g('dm_max')) / 2;
+  const dmGapCalc = dmTgt > 0 ? Math.max(0.5, dmTgt - totalDM) : null;
+
+  // Pre-populate the pellet inclusion input with the calculated gap if it's meaningful
+  const pelletIncEl = document.getElementById('pellet-inclusion');
+  if (dmGapCalc && pelletIncEl && (parseFloat(pelletIncEl.value) === 2 || dmGapCalc > 0.5)) {
+    pelletIncEl.value = dmGapCalc.toFixed(1);
+  }
+
+  const pelletKgDM = Math.max(parseFloat(pelletIncEl?.value) || 2, 0.1);
+  const totalWithPellet = totalDM + pelletKgDM;
+
+  // Get targets — fall back to 0 meaning "not set"
+  const dm_tgt     = g('dm_tgt')     || (g('dm_min')+g('dm_max'))/2;
+  const me_tgt     = g('me_tgt')     || (g('me_min')+g('me_max'))/2;
+  const cp_tgt     = g('cp_tgt')     || g('cp_min');
+  const ndf_tgt    = g('ndf_tgt')    || g('ndf_min');
+  const adf_tgt    = g('adf_tgt');
+  const fat_tgt    = g('fat_tgt');
+  const starch_tgt = g('starch_tgt');
+  const ca_tgt     = g('ca_tgt')     || g('ca_min');
+  const p_tgt      = g('p_tgt')      || g('p_min');
+  const mg_tgt     = g('mg_tgt');
+  const na_tgt     = g('na_tgt');
+  const s_tgt      = g('s_tgt');
+  const rdp_tgt    = g('rdp_tgt');
+  const udp_tgt    = g('udp_tgt');
+  const lys_tgt    = g('lys_tgt') || g('lys_min');
+  const met_tgt    = g('met_tgt') || g('met_min');
+  const his_tgt    = g('his_tgt') || g('his_min');
+
+  const meTgtDensity = currentMode === 'pellet'
+    ? me_tgt
+    : (me_tgt / Math.max(dm_tgt || totalWithPellet, 0.1));
+
+  // Safe accessors — return 0 if nut property missing/null
+  const n = (key) => (nut && typeof nut[key] === 'number' && isFinite(nut[key])) ? nut[key] : 0;
+
+  function gapPct(nutPct, tgtPct) {
+    if (!tgtPct || !isFinite(tgtPct)) return null;
+    const existingKg = (nutPct / 100) * totalDM;
+    const targetKg   = (tgtPct / 100) * totalWithPellet;
+    const pelletPct  = ((targetKg - existingKg) / pelletKgDM) * 100;
+    return isFinite(pelletPct) ? pelletPct : null;
+  }
+
+  function gapME(nutME, tgtME) {
+    if (!tgtME || !isFinite(tgtME)) return null;
+    const gap = (tgtME * totalWithPellet) - (nutME * totalDM);
+    const pelletME = gap / pelletKgDM;
+    return isFinite(pelletME) ? pelletME : null;
+  }
+
+  const specs = [
+    {label:'ME',        unit:'MJ/kg DM', val:gapME(n('me'),   meTgtDensity),        floor:0,   ceil:16,  cur:n('me'),    tgt:meTgtDensity},
+    {label:'CP',        unit:'%DM',      val:gapPct(n('cp'),  cp_tgt),              floor:0,   ceil:60,  cur:n('cp'),    tgt:cp_tgt},
+    {label:'NDF',       unit:'%DM',      val:ndf_tgt ? gapPct(n('ndf'), ndf_tgt) : null, floor:null, ceil:80, cur:n('ndf'), tgt:ndf_tgt},
+    {label:'ADF',       unit:'%DM',      val:adf_tgt ? gapPct(n('adf'), adf_tgt) : null, floor:null, ceil:50, cur:n('adf'), tgt:adf_tgt},
+    {label:'Fat',       unit:'%DM',      val:fat_tgt ? gapPct(n('fat'), fat_tgt) : null, floor:null, ceil:20, cur:n('fat'), tgt:fat_tgt},
+    {label:'Starch',    unit:'%DM',      val:starch_tgt ? gapPct(n('starch'), starch_tgt) : null, floor:null, ceil:75, cur:n('starch'), tgt:starch_tgt},
+    {label:'RDP',       unit:'%DM',      val:rdp_tgt ? gapPct(n('rdp'), rdp_tgt) : null, floor:null, ceil:40, cur:n('rdp'), tgt:rdp_tgt},
+    {label:'UDP',       unit:'%DM',      val:udp_tgt ? gapPct(n('udp'), udp_tgt) : null, floor:null, ceil:40, cur:n('udp'), tgt:udp_tgt},
+    {label:'Ca',        unit:'%DM',      val:gapPct(n('ca'),  ca_tgt),              floor:0,   ceil:5,   cur:n('ca'),    tgt:ca_tgt},
+    {label:'P',         unit:'%DM',      val:gapPct(n('p'),   p_tgt),               floor:0,   ceil:2,   cur:n('p'),     tgt:p_tgt},
+    {label:'Mg',        unit:'%DM',      val:mg_tgt ? gapPct(n('mg'), mg_tgt) : null, floor:0, ceil:1,   cur:n('mg'),    tgt:mg_tgt},
+    {label:'Na',        unit:'%DM',      val:na_tgt ? gapPct(n('na'), na_tgt) : null, floor:0, ceil:1,   cur:n('na'),    tgt:na_tgt},
+    {label:'S',         unit:'%DM',      val:s_tgt  ? gapPct(n('s'),  s_tgt)  : null, floor:0, ceil:1,   cur:n('s'),     tgt:s_tgt},
+    {label:'Lys (%CP)', unit:'%CP',      val:lys_tgt && n('lys') > 0 ? lys_tgt - n('lys') : null, floor:null, ceil:null, cur:n('lys'), tgt:lys_tgt},
+    {label:'Met (%CP)', unit:'%CP',      val:met_tgt && n('met') > 0 ? met_tgt - n('met') : null, floor:null, ceil:null, cur:n('met'), tgt:met_tgt},
+    {label:'His (%CP)', unit:'%CP',      val:his_tgt && n('his') > 0 ? his_tgt - n('his') : null, floor:null, ceil:null, cur:n('his'), tgt:his_tgt},
+  ];
+
+  let rows = `<thead><tr><th>Nutrient</th><th class="center">Unit</th><th>Current ration</th><th>Target</th><th>Pellet needs</th><th>Status</th></tr></thead><tbody>`;
+
+  specs.forEach(s => {
+    if (s.val === null) return;
+    const cur  = typeof s.cur === 'number' && isFinite(s.cur)  ? s.cur.toFixed(2)  : '—';
+    const tgt  = typeof s.tgt === 'number' && isFinite(s.tgt) && s.tgt > 0 ? s.tgt.toFixed(2) : '—';
+    let pelletVal = s.val;
+    let statusCls, statusTxt, pelletDisp;
+
+    if (s.floor !== null && pelletVal < s.floor) {
+      statusCls = 'ok'; statusTxt = 'No gap';
+      pelletDisp = '<span style="color:var(--green)">Already met</span>';
+    } else if (s.ceil !== null && pelletVal > s.ceil) {
+      statusCls = 'warn'; statusTxt = 'Large gap';
+      pelletVal = s.ceil;
+      pelletDisp = '<span style="color:var(--amber)">' + pelletVal.toFixed(1) + ' (capped at ' + s.ceil + ')</span>';
+    } else {
+      statusCls = 'info'; statusTxt = 'Gap found';
+      pelletDisp = '<strong>' + (isFinite(pelletVal) ? pelletVal.toFixed(1) : '—') + '</strong>';
+    }
+
+    rows += '<tr>' +
+      '<td>' + s.label + '</td>' +
+      '<td class="unit">' + s.unit + '</td>' +
+      '<td style="font-family:var(--mono);font-size:11px">' + cur + '</td>' +
+      '<td style="font-family:var(--mono);font-size:11px;color:var(--blue)">' + tgt + '</td>' +
+      '<td style="font-family:var(--mono);font-size:11px">' + pelletDisp + '</td>' +
+      '<td><span class="badge badge-' + (statusCls==='ok'?'ok':statusCls==='warn'?'warn':'info') + '">' + statusTxt + '</span></td>' +
+      '</tr>';
+  });
+
+  rows += '</tbody>';
+  document.getElementById('gap-table').innerHTML = rows;
+}
+
+// Wire pellet inclusion input to recalc gap on change
+document.addEventListener('DOMContentLoaded', () => {
+  const el = document.getElementById('pellet-inclusion');
+  if (el) el.addEventListener('input', () => {
+    if (_lastAnalysedNut) buildGapSpec(_lastAnalysedNut, _lastAnalysedDM);
+  });
+});
+
+function loadGapIntoOptimiser() {
+  if (!_lastAnalysedNut) { alert('Run an analysis first.'); return; }
+
+  const nut = _lastAnalysedNut;
+  const totalDM = _lastAnalysedDM;
+
+  // Calculate actual DM gap: how much DM the animal still needs after the existing ration
+  const dmTgt = g('dm_tgt') || (g('dm_min') + g('dm_max')) / 2;
+  const dmGap = Math.max(0.5, dmTgt - totalDM);  // DM the pellet needs to supply
+  const totalWithPellet = totalDM + dmGap;
+
+  // Update the pellet inclusion input in the gap card so it reflects the real gap
+  const pelletIncEl = document.getElementById('pellet-inclusion');
+  if (pelletIncEl) pelletIncEl.value = dmGap.toFixed(1);
+
+  // Set DM min/max/tgt in main requirements to just the pellet DM portion
+  const setVal = (id, v) => { const el=document.getElementById(id); if(el&&v!==null&&v>0) el.value = parseFloat(v.toFixed(2)); };
+
+  setVal('dm_min', dmGap * 0.9);
+  setVal('dm_tgt', dmGap);
+  setVal('dm_max', dmGap * 1.1);
+
+  // ME — use a practical concentrate density based on species/stage
+  // rather than back-calculating from the gap (which gives unreliable results)
+  const sp = document.getElementById('species')?.value || 'dairy';
+  const st = document.getElementById('stage')?.value || 'maintenance';
+
+  const pelletMeDensity = {
+    dairy: {
+      early_lactation: {min:11.5, tgt:12.2, max:12.5},
+      mid_lactation:   {min:11.0, tgt:12.0, max:12.5},
+      late_pregnancy:  {min:10.5, tgt:11.5, max:12.5},
+      maintenance:     {min:10.0, tgt:11.0, max:12.0},
+      growing:         {min:10.5, tgt:11.5, max:12.5},
+    },
+    beef: {
+      early_lactation: {min:10.5, tgt:11.5, max:12.5},
+      mid_lactation:   {min:10.0, tgt:11.0, max:12.0},
+      late_pregnancy:  {min:10.0, tgt:11.0, max:12.0},
+      maintenance:     {min:9.5,  tgt:10.5, max:11.5},
+      growing:         {min:11.0, tgt:12.0, max:12.5},
+    },
+    sheep: {
+      early_lactation: {min:10.5, tgt:11.5, max:12.5},
+      mid_lactation:   {min:10.0, tgt:11.0, max:12.0},
+      late_pregnancy:  {min:10.0, tgt:11.0, max:12.0},
+      maintenance:     {min:9.5,  tgt:10.5, max:11.5},
+      growing:         {min:10.5, tgt:11.5, max:12.5},
+    },
+    goat: {
+      early_lactation: {min:10.5, tgt:11.5, max:12.5},
+      mid_lactation:   {min:10.0, tgt:11.0, max:12.0},
+      late_pregnancy:  {min:10.0, tgt:11.0, max:12.0},
+      maintenance:     {min:9.5,  tgt:10.5, max:11.5},
+      growing:         {min:10.5, tgt:11.5, max:12.5},
+    },
+  };
+
+  const meDef = (pelletMeDensity[sp]?.[st]) || {min:11.0, tgt:12.0, max:12.5};
+
+  setVal('me_min', meDef.min);
+  setVal('me_tgt', meDef.tgt);
+  setVal('me_max', meDef.max);
+
+  // Helper: set %DM constraint from gap
+  function setGapConstraint(minId, tgtId, maxId, nutPct, tgtPct, minBound, maxBound) {
+    if (!tgtPct) return;
+    const existingKg = (nutPct/100) * totalDM;
+    const targetKg   = (tgtPct/100) * totalWithPellet;
+    const gapKg      = targetKg - existingKg;
+    const pelletPct  = (gapKg / dmGap) * 100;
+    if (pelletPct <= 0) return; // already met
+    const clamped = Math.min(Math.max(pelletPct, minBound||0), maxBound||99);
+    setVal(tgtId, clamped);
+    setVal(minId, Math.max(0, clamped * 0.9));
+    setVal(maxId, Math.min(99, clamped * 1.1));
+  }
+
+  setGapConstraint('cp_min','cp_tgt','cp_max',   nut.cp,  g('cp_tgt')||g('cp_min'),  8,  60);
+  setGapConstraint('ndf_min','ndf_tgt','ndf_max', nut.ndf, g('ndf_tgt')||g('ndf_min'),0,  80);
+  setGapConstraint('ca_min','ca_tgt','ca_max',    nut.ca,  g('ca_tgt')||g('ca_min'),  0,  5);
+  setGapConstraint('p_min','p_tgt','p_max',       nut.p,   g('p_tgt') ||g('p_min'),   0,  2);
+
+  const fat_tgt = g('fat_tgt');
+  if (fat_tgt) setGapConstraint('fat_min','fat_tgt','fat_max', nut.fat, fat_tgt, 0, 12);
+
+  const starch_tgt = g('starch_tgt');
+  if (starch_tgt) setGapConstraint('starch_min','starch_tgt','starch_max', nut.starch, starch_tgt, 0, 75);
+
+  const rdp_tgt = g('rdp_tgt');
+  if (rdp_tgt) setGapConstraint('rdp_min','rdp_tgt','rdp_max', nut.rdp, rdp_tgt, 0, 40);
+
+  const udp_tgt = g('udp_tgt');
+  if (udp_tgt) setGapConstraint('udp_min','udp_tgt','udp_max', nut.udp, udp_tgt, 0, 40);
+
+  // AA gaps are differences in %CP — set as new targets directly
+  const lys_tgt = g('lys_tgt')||g('lys_min');
+  if (lys_tgt && lys_tgt > nut.lys) { setVal('lys_min', lys_tgt*0.9); setVal('lys_tgt', lys_tgt); }
+  const met_tgt = g('met_tgt')||g('met_min');
+  if (met_tgt && met_tgt > nut.met) { setVal('met_min', met_tgt*0.9); setVal('met_tgt', met_tgt); }
+  const his_tgt = g('his_tgt')||g('his_min');
+  if (his_tgt && his_tgt > nut.his) { setVal('his_min', his_tgt*0.9); setVal('his_tgt', his_tgt); }
+
+  // Switch to pellet formulator tab
+  const pelletTabBtn = document.getElementById('main-tab-pellet');
+  switchMainTab('pellet-form', pelletTabBtn);
+
+  // Populate pellet spec fields
+  const pSet = (id, v) => { const el=document.getElementById(id); if(el&&v>0) el.value=parseFloat(v.toFixed(2)); };
+
+  pSet('p_dm_min', dmGap * 0.9);
+  pSet('p_dm_tgt', dmGap);
+  pSet('p_dm_max', dmGap * 1.1);
+
+  pSet('p_me_min', meDef.min);
+  pSet('p_me_tgt', meDef.tgt);
+  pSet('p_me_max', meDef.max);
+
+  function setPelletGap(minId, tgtId, maxId, nutPct, tgtPct, minBound, maxBound) {
+    if (!tgtPct) return;
+    const existingKg = (nutPct/100) * totalDM;
+    const targetKg   = (tgtPct/100) * totalWithPellet;
+    const gapKg      = targetKg - existingKg;
+    const pelletPct  = (gapKg / dmGap) * 100;
+    if (pelletPct <= 0) return;
+    const clamped = Math.min(Math.max(pelletPct, minBound||0), maxBound||99);
+    pSet(tgtId, clamped);
+    pSet(minId, Math.max(0, clamped * 0.9));
+    if (maxId) pSet(maxId, Math.min(99, clamped * 1.15));
+  }
+
+  setPelletGap('p_cp_min','p_cp_tgt','p_cp_max', nut.cp, g('cp_tgt')||g('cp_min'), 8, 60);
+  setPelletGap('p_ca_min','p_ca_tgt',null, nut.ca, g('ca_tgt')||g('ca_min'), 0, 5);
+  setPelletGap('p_p_min','p_p_tgt',null, nut.p, g('p_tgt')||g('p_min'), 0, 2);
+
+  const lys_tgt2 = g('lys_tgt')||g('lys_min');
+  if (lys_tgt2 && lys_tgt2 > nut.lys) pSet('p_lys_min', lys_tgt2 * 0.95);
+  const met_tgt2 = g('met_tgt')||g('met_min');
+  if (met_tgt2 && met_tgt2 > nut.met) pSet('p_met_min', met_tgt2 * 0.95);
+
+  document.getElementById('analyse-results').classList.add('hidden');
+  document.querySelector('.main').scrollIntoView({behavior:'smooth', block:'start'});
+  alert('Pellet spec loaded into Pellet formulator tab. Review the spec, then hit Optimise pellet.');
+}
+
+
+
+function optimise() {
+  const dm_min=g('dm_min'),dm_max=g('dm_max'),dm_tgt=g('dm_tgt');
+  const me_min=g('me_min'),me_max=g('me_max'),me_tgt=g('me_tgt');
+  const cp_min=g('cp_min'),cp_max=g('cp_max'),cp_tgt=g('cp_tgt');
+  const ndf_min=g('ndf_min'),ndf_max=g('ndf_max'),ndf_tgt=g('ndf_tgt');
+  const adf_min=g('adf_min'),adf_max=g('adf_max'),adf_tgt=g('adf_tgt');
+  const starch_min=g('starch_min'),starch_max=g('starch_max'),starch_tgt=g('starch_tgt');
+  const fat_min=g('fat_min'),fat_max=g('fat_max'),fat_tgt=g('fat_tgt');
+  const rdp_min=g('rdp_min'),rdp_max=g('rdp_max'),rdp_tgt=g('rdp_tgt');
+  const udp_min=g('udp_min'),udp_max=g('udp_max'),udp_tgt=g('udp_tgt');
+  const ca_min=g('ca_min'),ca_max=g('ca_max'),ca_tgt=g('ca_tgt');
+  const p_min=g('p_min'),p_max=g('p_max'),p_tgt=g('p_tgt');
+  const mg_min=g('mg_min'),mg_max=g('mg_max'),mg_tgt=g('mg_tgt');
+  const na_min=g('na_min'),na_max=g('na_max'),na_tgt=g('na_tgt');
+  const k_min=g('k_min'),k_max=g('k_max'),k_tgt=g('k_tgt');
+  const s_min=g('s_min'),s_max=g('s_max'),s_tgt=g('s_tgt');
+  const lys_min=g('lys_min'),lys_max=g('lys_max'),lys_tgt=g('lys_tgt');
+  const met_min=g('met_min'),met_max=g('met_max'),met_tgt=g('met_tgt');
+  const thr_min=g('thr_min'),thr_max=g('thr_max'),thr_tgt=g('thr_tgt');
+  const trp_min=g('trp_min'),trp_max=g('trp_max'),trp_tgt=g('trp_tgt');
+  const his_min=g('his_min'),his_max=g('his_max'),his_tgt=g('his_tgt');
+
+  // Helper: soft pull toward target. Returns gradient nudge toward tgt value.
+  // Only active if tgt > 0. Weaker than hard constraints.
+  function tgtPull(val, tgt, ingVal, nutVal) {
+    if (!tgt) return 0;
+    const err = tgt - val;
+    const sign = err > 0 ? 1 : -1;
+    return (ingVal > nutVal ? -sign : sign) * Math.min(Math.abs(err) * 0.3, 0.5);
+  }
+
+  // Validate targets — auto-clamp if outside min/max and warn user
+  const tgtChecks = [
+    {label:'DM intake',    tgt:dm_tgt,     min:dm_min,     max:dm_max,     id:'dm_tgt'},
+    {label:'ME total',     tgt:me_tgt,     min:me_min,     max:me_max,     id:'me_tgt'},
+    {label:'CP',           tgt:cp_tgt,     min:cp_min,     max:cp_max,     id:'cp_tgt'},
+    {label:'NDF',          tgt:ndf_tgt,    min:ndf_min,    max:ndf_max,    id:'ndf_tgt'},
+    {label:'ADF',          tgt:adf_tgt,    min:adf_min,    max:adf_max<99?adf_max:999, id:'adf_tgt'},
+    {label:'Starch',       tgt:starch_tgt, min:starch_min, max:starch_max<99?starch_max:999, id:'starch_tgt'},
+    {label:'Fat',          tgt:fat_tgt,    min:fat_min,    max:fat_max<99?fat_max:999, id:'fat_tgt'},
+    {label:'RDP',          tgt:rdp_tgt,    min:rdp_min,    max:rdp_max<99?rdp_max:999, id:'rdp_tgt'},
+    {label:'UDP',          tgt:udp_tgt,    min:udp_min,    max:udp_max<99?udp_max:999, id:'udp_tgt'},
+    {label:'Ca',           tgt:ca_tgt,     min:ca_min,     max:ca_max<99?ca_max:999,   id:'ca_tgt'},
+    {label:'P',            tgt:p_tgt,      min:p_min,      max:p_max<99?p_max:999,     id:'p_tgt'},
+    {label:'Lysine',       tgt:lys_tgt,    min:lys_min,    max:lys_max||999,            id:'lys_tgt'},
+    {label:'Methionine',   tgt:met_tgt,    min:met_min,    max:met_max||999,            id:'met_tgt'},
+    {label:'Threonine',    tgt:thr_tgt,    min:thr_min,    max:thr_max||999,            id:'thr_tgt'},
+    {label:'Tryptophan',   tgt:trp_tgt,    min:trp_min,    max:trp_max||999,            id:'trp_tgt'},
+    {label:'Histidine',    tgt:his_tgt,    min:his_min,    max:his_max||999,            id:'his_tgt'},
+  ];
+  const clamped = [];
+  tgtChecks.forEach(c => {
+    if (!c.tgt) return;
+    if (c.min > 0 && c.tgt < c.min) {
+      document.getElementById(c.id).value = c.min;
+      clamped.push(`${c.label} target clamped up to min (${c.min})`);
+    } else if (c.max < 999 && c.tgt > c.max) {
+      document.getElementById(c.id).value = c.max;
+      clamped.push(`${c.label} target clamped down to max (${c.max})`);
+    }
+  });
+  if (clamped.length) {
+    alert('Target values outside min/max range were auto-clamped:\n\n' + clamped.join('\n') + '\n\nTargets have been adjusted. Click Optimise again to run.');
+    return;
+  }
+
+  const active = ingredients.filter(x => x.active);
+  if (active.length < 2) { alert('Enable at least 2 ingredients.'); return; }
+
+  // Always reinitialise x fresh — fixes rerun bug
+  const dm_target = (dm_min+dm_max)/2;
+  let x = active.map(i => Math.max(i.minInc, 0.05));
+  const xSum = x.reduce((a,b)=>a+b,0);
+  if (xSum>0) x = x.map(v=>v*dm_target/xSum);
+  const costPerKgDM = active.map(i=>(i.cost/1000)/(i.dm/100));
+
+  function getNutrients(x) {
+    const totalDM = x.reduce((a,b)=>a+b,0);
+    if (totalDM<=0) return {};
+    let me=0,cp=0,fat=0,pufa=0,ndf=0,adf=0,starch=0,rdp=0,udp=0,ca=0,p=0,mg=0,na=0,k=0,s_=0,cost=0;
+    let co=0,cu=0,fe=0,mn=0,zn=0,se=0;
+    let lys_a=0,met_a=0,thr_a=0,trp_a=0,his_a=0,npnKg=0;
+    x.forEach((xi,i)=>{
+      const ing=active[i], cpAbs=xi*(ing.cp/100);
+      me+=xi*ing.me; cp+=cpAbs; fat+=xi*(ing.fat/100);
+      pufa+=xi*((ing.pufa||0)/100);
+      ndf+=xi*(ing.ndf/100); adf+=xi*(ing.adf/100); starch+=xi*(ing.starch/100);
+      rdp+=xi*(ing.rdp/100); udp+=xi*(ing.udp/100);
+      ca+=xi*(ing.ca/100); p+=xi*(ing.p/100); mg+=xi*(ing.mg/100);
+      na+=xi*(ing.na/100); k+=xi*(ing.k/100); s_+=xi*(ing.s/100);
+      // Trace minerals accumulate as mg/kg DM weighted by inclusion
+      co+=xi*(ing.co||0); cu+=xi*(ing.cu||0); fe+=xi*(ing.fe||0);
+      mn+=xi*(ing.mn||0); zn+=xi*(ing.zn||0); se+=xi*(ing.se||0);
+      cost+=xi*costPerKgDM[i];
+      if (ing.cp > 0) {
+        lys_a+=cpAbs*(ing.lys/100); met_a+=cpAbs*(ing.met/100);
+        thr_a+=cpAbs*(ing.thr/100); trp_a+=cpAbs*(ing.trp/100); his_a+=cpAbs*(ing.his/100);
+      } else {
+        lys_a+=xi*(ing.lys/100); met_a+=xi*(ing.met/100);
+        thr_a+=xi*(ing.thr/100); trp_a+=xi*(ing.trp/100); his_a+=xi*(ing.his/100);
+      }
+      if(ing.npn) npnKg+=xi;
+    });
+    const cpT=cp;
+    return {
+      totalDM, me:me/totalDM,
+      cp:(cp/totalDM)*100, fat:(fat/totalDM)*100, pufa:(pufa/totalDM)*100,
+      ndf:(ndf/totalDM)*100, adf:(adf/totalDM)*100, starch:(starch/totalDM)*100,
+      rdp:(rdp/totalDM)*100, udp:(udp/totalDM)*100,
+      ca:(ca/totalDM)*100, p:(p/totalDM)*100, mg:(mg/totalDM)*100,
+      na:(na/totalDM)*100, k:(k/totalDM)*100, s:(s_/totalDM)*100,
+      co:co/totalDM, cu:cu/totalDM, fe:fe/totalDM,
+      mn:mn/totalDM, zn:zn/totalDM, se:se/totalDM,
+      cost,
+      lys:cpT>0?(lys_a/cpT)*100:0, met:cpT>0?(met_a/cpT)*100:0,
+      thr:cpT>0?(thr_a/cpT)*100:0, trp:cpT>0?(trp_a/cpT)*100:0,
+      his:cpT>0?(his_a/cpT)*100:0,
+      npnKg, npnPctDM:(npnKg/totalDM)*100,
+      ash: Math.max(0, 100 - (cp/totalDM*100) - (fat/totalDM*100) - (ndf/totalDM*100) - (starch/totalDM*100) - 3),
+      cf: (adf/totalDM)*100 * 0.65,
+      tdn: me/totalDM * 5.8,
+      negain: me/totalDM * 0.062,
+    };
+  }
+
+  let lr=0.05;
+  // ME density bounds — mode-aware, estimated pre-loop using dm_target
+  const meDMinEst = currentMode==='pellet' ? me_min : me_min/Math.max(dm_target,0.1);
+  const me_density_tgt = currentMode==='pellet' ? me_tgt : (me_tgt ? me_tgt/Math.max(dm_target,0.1) : 0);
+  for (let iter=0; iter<1200; iter++) {
+    const nut=getNutrients(x);
+    const tDM=Math.max(nut.totalDM,0.1);
+    const grad=x.map((_,i)=>{
+      let g2=costPerKgDM[i];
+      if(nut.totalDM<dm_min) g2-=2.8; if(nut.totalDM>dm_max) g2+=2.8;
+      const me_d=currentMode==='pellet' ? me_min : me_min/tDM; if(nut.me<me_d) g2+=(active[i].me<nut.me?0.7:-0.9)*2.0;
+      if(nut.cp<cp_min){if(active[i].cp>nut.cp)g2-=1.4;else g2+=0.5;} if(nut.cp>cp_max){if(active[i].cp>nut.cp)g2+=0.8;}
+      if(nut.fat>fat_max&&fat_max<99){if(active[i].fat>nut.fat)g2+=0.8;}
+      if(nut.ndf<ndf_min){if(active[i].ndf>nut.ndf)g2-=1.0;} if(nut.ndf>ndf_max){if(active[i].ndf>nut.ndf)g2+=1.0;}
+      if(adf_max<99&&nut.adf>adf_max){if(active[i].adf>nut.adf)g2+=0.7;}
+      if(starch_min>0&&nut.starch<starch_min){if(active[i].starch>nut.starch)g2-=0.8;}
+      if(starch_max<99&&nut.starch>starch_max){if(active[i].starch>nut.starch)g2+=0.8;}
+      if(rdp_min>0&&nut.rdp<rdp_min){if(active[i].rdp>nut.rdp)g2-=0.7;}
+      if(rdp_max<99&&nut.rdp>rdp_max){if(active[i].rdp>nut.rdp)g2+=0.7;}
+      if(udp_min>0&&nut.udp<udp_min){if(active[i].udp>nut.udp)g2-=0.7;}
+      if(nut.ca<ca_min){if(active[i].ca>nut.ca)g2-=0.8;} if(ca_max<99&&nut.ca>ca_max){if(active[i].ca>nut.ca)g2+=0.5;}
+      if(nut.p<p_min){if(active[i].p>nut.p)g2-=0.6;} if(p_max<99&&nut.p>p_max){if(active[i].p>nut.p)g2+=0.5;}
+      if(mg_min>0&&nut.mg<mg_min){if(active[i].mg>nut.mg)g2-=0.5;}
+      if(na_min>0&&nut.na<na_min){if(active[i].na>nut.na)g2-=0.4;}
+      if(k_max<99&&nut.k>k_max){if(active[i].k>nut.k)g2+=0.5;}
+      if(s_min>0&&nut.s<s_min){if(active[i].s>nut.s)g2-=0.4;}
+      if(lys_min>0&&nut.lys<lys_min){if(active[i].lys>nut.lys)g2-=1.0;}
+      if(met_min>0&&nut.met<met_min){if(active[i].met>nut.met)g2-=1.0;}
+      if(thr_min>0&&nut.thr<thr_min){if(active[i].thr>nut.thr)g2-=0.8;}
+      if(trp_min>0&&nut.trp<trp_min){if(active[i].trp>nut.trp)g2-=0.8;}
+      if(his_min>0&&nut.his<his_min){if(active[i].his>nut.his)g2-=0.9;}
+      // Soft target pulls — only active when constraint is satisfied
+      if(dm_tgt&&nut.totalDM>=dm_min&&nut.totalDM<=dm_max) g2+=tgtPull(nut.totalDM,dm_tgt,1,1);
+      if(cp_tgt&&nut.cp>=cp_min&&nut.cp<=cp_max) g2+=tgtPull(nut.cp,cp_tgt,active[i].cp,nut.cp);
+      if(me_tgt&&nut.me>=(meDMinEst)) g2+=tgtPull(nut.me,me_density_tgt||meDMinEst,active[i].me,nut.me);
+      if(ndf_tgt&&nut.ndf>=ndf_min&&nut.ndf<=ndf_max) g2+=tgtPull(nut.ndf,ndf_tgt,active[i].ndf,nut.ndf);
+      if(starch_tgt) g2+=tgtPull(nut.starch,starch_tgt,active[i].starch,nut.starch);
+      if(fat_tgt) g2+=tgtPull(nut.fat,fat_tgt,active[i].fat,nut.fat);
+      if(rdp_tgt) g2+=tgtPull(nut.rdp,rdp_tgt,active[i].rdp,nut.rdp);
+      if(udp_tgt) g2+=tgtPull(nut.udp,udp_tgt,active[i].udp,nut.udp);
+      if(ca_tgt) g2+=tgtPull(nut.ca,ca_tgt,active[i].ca,nut.ca);
+      if(p_tgt) g2+=tgtPull(nut.p,p_tgt,active[i].p,nut.p);
+      if(lys_tgt&&lys_min>0) g2+=tgtPull(nut.lys,lys_tgt,active[i].lys,nut.lys);
+      if(met_tgt&&met_min>0) g2+=tgtPull(nut.met,met_tgt,active[i].met,nut.met);
+      if(thr_tgt&&thr_min>0) g2+=tgtPull(nut.thr,thr_tgt,active[i].thr,nut.thr);
+      if(his_tgt&&his_min>0) g2+=tgtPull(nut.his,his_tgt,active[i].his,nut.his);
+      return g2;
+    });
+    x=x.map((xi,i)=>{
+      let nx=xi-lr*grad[i];
+      nx=Math.max(active[i].minInc,nx);
+      if(active[i].maxInc<99) nx=Math.min(active[i].maxInc,nx);
+      return Math.max(0,nx);
+    });
+    if(iter%100===99) lr*=0.80;
+  }
+
+  const nut=getNutrients(x);
+  const pelletCost=nut.totalDM>0?(nut.cost/nut.totalDM)*1000:0;
+
+  // Headline metrics
+  if(currentMode==='pellet'){
+    document.getElementById('m-cost').textContent='$'+Math.round(pelletCost);
+    document.getElementById('cost-unit').textContent='$/tonne DM pellet';
+  } else {
+    document.getElementById('m-cost').textContent='$'+nut.cost.toFixed(2);
+    document.getElementById('cost-unit').textContent='$/head/day';
+  }
+  document.getElementById('m-dm').textContent=nut.totalDM.toFixed(1);
+  document.getElementById('m-me').textContent=nut.me.toFixed(1);
+  document.getElementById('m-cp').textContent=nut.cp.toFixed(1)+'%';
+
+  // Inclusion table
+  const tbody=document.getElementById('ration-body');
+  tbody.innerHTML='';
+  // Update contribution column header
+  document.getElementById('cost-col-head').textContent = currentMode==='pellet' ? '$/t contrib.' : '$/hd/day contrib.';
+
+  x.forEach((xi,i)=>{
+    if(xi<0.005) return;
+    const pct=(xi/nut.totalDM*100).toFixed(1);
+    const ingPricePerTDM = Math.round(costPerKgDM[i]*1000); // $/tonne DM of this ingredient
+    const contribDisp = currentMode==='pellet'
+      ? '$'+Math.round((xi*costPerKgDM[i]/nut.totalDM)*1000)
+      : '$'+(xi*costPerKgDM[i]).toFixed(2);
+    const npnTag=active[i].npn?' <span class="badge badge-npn">NPN</span>':'';
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${active[i].name}${npnTag}</td><td>${xi.toFixed(3)}</td><td>${pct}%</td><td>$${ingPricePerTDM}</td><td>${contribDisp}</td>`;
+    tbody.appendChild(tr);
+  });
+  const totalTr=document.createElement('tr'); totalTr.className='total-row';
+  const tCostDisp=currentMode==='pellet'?'$'+Math.round(pelletCost):'$'+nut.cost.toFixed(2);
+  totalTr.innerHTML=`<td>Total</td><td>${nut.totalDM.toFixed(3)}</td><td>100%</td><td>—</td><td>${tCostDisp}</td>`;
+  tbody.appendChild(totalTr);
+
+  // NPN/urea block
+  const npnBlock=document.getElementById('urea-block'); npnBlock.innerHTML='';
+  if(nut.npnKg>0.001){
+    const pDM=nut.npnPctDM;
+    let lvl,cls,adv;
+    if(pDM<=0.8){lvl='Low';cls='alert-ok';adv='Within safe range. Ensure adequate fermentable carbohydrate and dietary S (S:N ≥ 1:10).';}
+    else if(pDM<=1.2){lvl='Moderate';cls='alert-warn';adv='Approaching limit. Readily fermentable CHO essential. Consider split feeding.';}
+    else{lvl='High — toxicity risk';cls='alert-fail';adv='Exceeds safe practical limit. Reduce urea Max inclusion.';}
+    npnBlock.innerHTML=`<div class="alert ${cls}"><strong>NPN present</strong> — ${nut.npnKg.toFixed(3)} kg DM/day (${pDM.toFixed(2)}% DM). Rumen NH₃ load: <strong>${lvl}</strong>. ${adv}</div>`;
+  }
+
+  // PUFA traffic light
+  {
+    const p = nut.pufa;
+    let pufaCls, pufaLvl, pufaAdv;
+    if (p < 2.5) {
+      pufaCls='alert-ok'; pufaLvl='Low';
+      pufaAdv='Estimated PUFA load is within safe range for rumen biohydrogenation.';
+    } else if (p < 4.0) {
+      pufaCls='alert-warn'; pufaLvl='Moderate';
+      pufaAdv='Approaching biohydrogenation capacity. Monitor high-PUFA ingredient inclusions (canola, cottonseed, distillers grain). Consider protected fat if milk fat depression is a concern.';
+    } else {
+      pufaCls='alert-fail'; pufaLvl='High — rumen fat stress risk';
+      pufaAdv='Estimated PUFA load likely exceeds rumen biohydrogenation capacity. Risk of milk fat depression and rumen dysfunction. Reduce high-PUFA ingredients or substitute with protected fat sources.';
+    }
+    npnBlock.innerHTML += `<div class="alert ${pufaCls}" style="margin-top:6px"><strong>PUFA load (est.) ${p.toFixed(2)}% DM</strong> — ${pufaLvl}. ${pufaAdv}</div>`;
+  }
+
+  function outRow(label, val, unit, min, max, tgt, decimals, forceNA) {
+    decimals = decimals===undefined ? 2 : decimals;
+    if (forceNA) return `<tr><td>${label}</td><td class="unit">${unit}</td><td class="na">—</td><td></td></tr>`;
+    const v = typeof val==='number' ? val.toFixed(decimals) : val;
+    let cls='', tgtStr='';
+    if (min!==undefined && max!==undefined && min!==null && max!==null) {
+      const ok = (min===0||val>=min) && (max>=99||val<=max);
+      cls = ok ? 'ok' : 'fail';
+      if (tgt>0) {
+        tgtStr = `<span style="color:var(--blue);font-weight:500">${tgt.toFixed(decimals)}</span>`;
+        if (min>0||max<99) tgtStr += ` <span style="opacity:0.6">(${min>0?min.toFixed(decimals):''}${min>0&&max<99?'–':''}${max<99?max.toFixed(decimals):''})</span>`;
+      } else if (min>0||max<99) {
+        tgtStr = `${min>0?min.toFixed(decimals):''}${min>0&&max<99?' – ':''}${max<99?max.toFixed(decimals):''}`;
+      }
+    }
+    return `<tr><td>${label}</td><td class="unit">${unit}</td><td class="${cls}">${v}</td><td style="font-size:10px;color:var(--text-faint)">${tgtStr}</td></tr>`;
+  }
+
+  function sectionHead(label) {
+    return `<tr class="section-head"><td colspan="4">${label}</td></tr>`;
+  }
+
+  // Post-loop ME density bounds using final nut.totalDM
+  const meDMin = currentMode==='pellet' ? me_min : me_min/Math.max(nut.totalDM,0.1);
+  const meDMax = currentMode==='pellet' ? me_max : me_max/Math.max(nut.totalDM,0.1);
+
+  // Proximate & energy table
+  document.getElementById('out-proximate').innerHTML = `
+    <thead><tr><th>Nutrient</th><th class="center">Unit</th><th>Value</th><th>Target / range</th></tr></thead>
+    <tbody>
+    ${sectionHead('Proximate')}
+    ${outRow('Protein (CP)',nut.cp,'%',cp_min,cp_max,cp_tgt)}
+    ${outRow('NDF',nut.ndf,'%',ndf_min,ndf_max,ndf_tgt)}
+    ${outRow('ADF',nut.adf,'%',adf_min<1?0:adf_min,adf_max,adf_tgt)}
+    ${outRow('CF (est.)',nut.cf,'%',null,null,0)}
+    ${outRow('Fat',nut.fat,'%',fat_min,fat_max,fat_tgt)}
+    ${outRow('PUFA (est.)',nut.pufa,'%DM',null,null,0)}
+    ${outRow('Starch',nut.starch,'%',starch_min,starch_max,starch_tgt)}
+    ${sectionHead('Energy')}
+    ${outRow('ME density',nut.me,'MJ/kg DM',meDMin,meDMax,me_density_tgt)}
+    ${currentMode==='tmr' ? outRow('ME total',nut.me*nut.totalDM,'MJ/head/day',me_min,me_max,me_tgt,1) : ''}
+    ${outRow('NEgain (est.)',nut.negain,'MJ/kg DM',null,null,0)}
+    ${outRow('TDN (est.)',nut.tdn,'%',null,null,0,1)}
+    ${sectionHead('Intake & cost')}
+    ${outRow('DM intake',nut.totalDM,'kg/hd/day',dm_min,dm_max,dm_tgt)}
+    ${outRow('Cost (head/day)','$'+nut.cost.toFixed(2),'',null,null,0,2)}
+    ${outRow('Cost ($/t DM)','$'+Math.round(pelletCost),'',null,null,0,0)}
+    </tbody>`;
+
+  // Minerals & protein fractions
+  document.getElementById('out-minerals').innerHTML = `
+    <thead><tr><th>Nutrient</th><th class="center">Unit</th><th>Value</th><th>Target / range</th></tr></thead>
+    <tbody>
+    ${sectionHead('Protein fractions')}
+    ${outRow('RDP',nut.rdp,'%DM',rdp_min,rdp_max,rdp_tgt)}
+    ${outRow('UDP',nut.udp,'%DM',udp_min,udp_max,udp_tgt)}
+    ${sectionHead('Macro minerals')}
+    ${outRow('Ca',nut.ca,'%DM',ca_min,ca_max<99?ca_max:99,ca_tgt)}
+    ${outRow('P',nut.p,'%DM',p_min,p_max<99?p_max:99,p_tgt)}
+    ${outRow('Mg',nut.mg,'%DM',mg_min,mg_max<99?mg_max:99,mg_tgt)}
+    ${outRow('Na',nut.na,'%DM',na_min,na_max<99?na_max:99,na_tgt)}
+    ${outRow('K',nut.k,'%DM',k_min,k_max<99?k_max:99,k_tgt)}
+    ${outRow('S',nut.s,'%DM',s_min,s_max<99?s_max:99,s_tgt)}
+    ${sectionHead('Trace minerals (mg/kg DM)')}
+    ${outRow('Co',nut.co,'mg/kg',null,null,0)}
+    ${outRow('Cu',nut.cu,'mg/kg',null,null,0,1)}
+    ${outRow('Fe',nut.fe,'mg/kg',null,null,0,0)}
+    ${outRow('Mn',nut.mn,'mg/kg',null,null,0,0)}
+    ${outRow('Zn',nut.zn,'mg/kg',null,null,0,0)}
+    ${outRow('Se',nut.se,'mg/kg',null,null,0)}
+    </tbody>`;
+
+  // AA table
+  document.getElementById('out-aa').innerHTML = `
+    <thead><tr><th>Amino acid</th><th class="center">Unit</th><th>Value</th><th>Target / range</th></tr></thead>
+    <tbody>
+    ${sectionHead('% of CP')}
+    ${outRow('Lysine',nut.lys,'%CP',lys_min,lys_max||99,lys_tgt)}
+    ${outRow('Methionine',nut.met,'%CP',met_min,met_max||99,met_tgt)}
+    ${outRow('Threonine',nut.thr,'%CP',thr_min,thr_max||99,thr_tgt)}
+    ${outRow('Tryptophan',nut.trp,'%CP',trp_min,trp_max||99,trp_tgt)}
+    ${outRow('Histidine',nut.his,'%CP',his_min,his_max||99,his_tgt)}
+    ${sectionHead('g/kg DM')}
+    ${outRow('Lys',nut.lys*nut.cp/10,'g/kg',null,null,0)}
+    ${outRow('Met',nut.met*nut.cp/10,'g/kg',null,null,0)}
+    ${outRow('Thr',nut.thr*nut.cp/10,'g/kg',null,null,0)}
+    ${outRow('Trp',nut.trp*nut.cp/10,'g/kg',null,null,0)}
+    ${outRow('His',nut.his*nut.cp/10,'g/kg',null,null,0)}
+    ${sectionHead('Vitamins — not calculated')}
+    ${outRow('Vit A',null,null,null,null,0,0,true)}
+    ${outRow('Vit D3',null,null,null,null,0,0,true)}
+    ${outRow('Vit E',null,null,null,null,0,0,true)}
+    </tbody>`;
+
+  // Constraint summary — add target column
+  const allConstraints = [
+    {label:'DM intake',val:nut.totalDM,min:dm_min,max:dm_max,tgt:dm_tgt,unit:'kg'},
+    {label:'ME density',val:nut.me,min:meDMin,max:meDMax,tgt:me_density_tgt,unit:'MJ/kg'},
+    {label:'CP',val:nut.cp,min:cp_min,max:cp_max,tgt:cp_tgt,unit:'%'},
+    {label:'NDF',val:nut.ndf,min:ndf_min,max:ndf_max,tgt:ndf_tgt,unit:'%'},
+    {label:'ADF',val:nut.adf,min:adf_min<1?0:adf_min,max:adf_max,tgt:adf_tgt,unit:'%'},
+    {label:'Fat',val:nut.fat,min:fat_min,max:fat_max,tgt:fat_tgt,unit:'%'},
+    {label:'Starch',val:nut.starch,min:starch_min,max:starch_max,tgt:starch_tgt,unit:'%'},
+    {label:'RDP',val:nut.rdp,min:rdp_min,max:rdp_max,tgt:rdp_tgt,unit:'%DM'},
+    {label:'UDP',val:nut.udp,min:udp_min,max:udp_max,tgt:udp_tgt,unit:'%DM'},
+    {label:'Ca',val:nut.ca,min:ca_min,max:ca_max<99?ca_max:99,tgt:ca_tgt,unit:'%'},
+    {label:'P',val:nut.p,min:p_min,max:p_max<99?p_max:99,tgt:p_tgt,unit:'%'},
+    {label:'Mg',val:nut.mg,min:mg_min,max:mg_max<99?mg_max:99,tgt:mg_tgt,unit:'%'},
+    {label:'Na',val:nut.na,min:na_min,max:na_max<99?na_max:99,tgt:na_tgt,unit:'%'},
+    {label:'K',val:nut.k,min:k_min,max:k_max<99?k_max:99,tgt:k_tgt,unit:'%'},
+    {label:'S',val:nut.s,min:s_min,max:s_max<99?s_max:99,tgt:s_tgt,unit:'%'},
+    ...(lys_min>0?[{label:'Lysine',val:nut.lys,min:lys_min,max:lys_max||99,tgt:lys_tgt,unit:'%CP'}]:[]),
+    ...(met_min>0?[{label:'Methionine',val:nut.met,min:met_min,max:met_max||99,tgt:met_tgt,unit:'%CP'}]:[]),
+    ...(thr_min>0?[{label:'Threonine',val:nut.thr,min:thr_min,max:thr_max||99,tgt:thr_tgt,unit:'%CP'}]:[]),
+    ...(trp_min>0?[{label:'Tryptophan',val:nut.trp,min:trp_min,max:trp_max||99,tgt:trp_tgt,unit:'%CP'}]:[]),
+    ...(his_min>0?[{label:'Histidine',val:nut.his,min:his_min,max:his_max||99,tgt:his_tgt,unit:'%CP'}]:[]),
+  ];
+
+  const allOk = allConstraints.every(c => {
+    const hasMin = c.min>0, hasMax = c.max<99;
+    return (!hasMin||c.val>=c.min) && (!hasMax||c.val<=c.max);
+  });
+
+  let cRows = allConstraints.map(c => {
+    const hasMin=c.min>0, hasMax=c.max<99;
+    if (!hasMin&&!hasMax) return `<tr><td>${c.label}</td><td class="unit">${c.unit}</td><td>${c.val.toFixed(2)}</td><td class="na">—</td><td class="na">—</td></tr>`;
+    const ok=(!hasMin||c.val>=c.min)&&(!hasMax||c.val<=c.max);
+    const tgtDisp = c.tgt>0 ? `<span style="color:var(--blue);font-weight:500">${c.tgt.toFixed(2)}</span>` : '<span style="color:var(--text-faint)">—</span>';
+    return `<tr><td>${c.label}</td><td class="unit">${c.unit}</td><td class="${ok?'ok':'fail'}">${c.val.toFixed(2)}</td><td>${tgtDisp}</td><td><span class="badge ${ok?'badge-ok':'badge-fail'}">${ok?'OK':'FAIL'}</span></td></tr>`;
+  }).join('');
+
+  document.getElementById('out-constraints').innerHTML = `
+    <thead><tr><th>Constraint</th><th class="center">Unit</th><th>Value</th><th>Target</th><th>Status</th></tr></thead>
+    <tbody>${cRows}</tbody>`;
+
+  const failed = allConstraints.filter(c => {
+    const hasMin=c.min>0, hasMax=c.max<99;
+    return (hasMin&&c.val<c.min)||(hasMax&&c.val>c.max);
+  });
+
+  document.getElementById('result-status').innerHTML = allOk
+    ? '<div class="alert alert-ok">All active constraints satisfied — least-cost ration found.</div>'
+    : '<div class="alert alert-fail"><strong>Constraints not met:</strong> ' +
+      failed.map(c => {
+        const dir = c.val < c.min
+          ? c.val.toFixed(2) + ' < min ' + c.min.toFixed(2)
+          : c.val.toFixed(2) + ' > max ' + c.max.toFixed(2);
+        return c.label + ' (' + dir + ' ' + c.unit + ')';
+      }).join(' · ') +
+      '<br><span style="opacity:0.8;font-size:11px">Adjust max inclusions, enable more ingredients, or relax constraints.</span></div>';
+
+  document.getElementById('results-section').classList.remove('hidden');
+  document.getElementById('results-section').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function saveAsDefault() {
+  const ingJson = JSON.stringify(ingredients);
+  const pelletJson = JSON.stringify(pelletIngredients);
+
+  function injectAndDownload(src) {
+    src = src.replace(
+      /(<script\b[^>]*\bid="embedded-ingredients"[^>]*>)([\s\S]*?)(<\/script>)/,
+      (m, open, content, close) => open + ingJson + close
+    );
+    src = src.replace(
+      /(<script\b[^>]*\bid="embedded-pellet-ingredients"[^>]*>)([\s\S]*?)(<\/script>)/,
+      (m, open, content, close) => open + pelletJson + close
+    );
+    const blob = new Blob([src], {type:'text/html;charset=utf-8'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'ration-formulator-v5.html';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    const btn = document.querySelector('[onclick="saveAsDefault()"]');
+    if (btn) { const orig=btn.textContent; btn.textContent='✓ Saved!'; setTimeout(()=>btn.textContent=orig, 2000); }
+  }
+
+  function fallback() {
+    // outerHTML fallback — used for local file:// where fetch is blocked
+    const src = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+    injectAndDownload(src);
+  }
+
+  try {
+    fetch(window.location.href)
+      .then(r => {
+        if (!r.ok && r.status !== 0) throw new Error('bad response');
+        return r.text();
+      })
+      .then(src => {
+        // Validate fetched source actually looks like our file
+        if (src.length < 1000 || !src.includes('embedded-ingredients')) {
+          fallback();
+        } else {
+          injectAndDownload(src);
+        }
+      })
+      .catch(() => fallback());
+  } catch(e) {
+    fallback();
+  }
+}
+
+function saveLibrary() {
+  const data={version:5,savedAt:new Date().toISOString(),ingredients};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='feed-library-v5.json'; a.click(); URL.revokeObjectURL(a.href);
+}
+
+function loadLibrary(event) {
+  const file=event.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try {
+      const data=JSON.parse(e.target.result);
+      if(data.ingredients&&Array.isArray(data.ingredients)){
+        ingredients=data.ingredients;
+        nextId=Math.max(...ingredients.map(i=>i.id))+1;
+        const defs={lys:3.5,met:1.6,thr:3.2,trp:1.1,his:2.2,npn:false,fat:2.0,pufa:1.0,adf:20,starch:20,rdp:8,udp:4,mg:0.15,na:0.03,k:0.60,s:0.15,co:0.05,cu:5.0,fe:80,mn:25,zn:30,se:0.08};
+        ingredients.forEach(i=>{ for(const[k,v] of Object.entries(defs)) if(i[k]===undefined) i[k]=v; });
+        renderTable();
+        alert(`Loaded ${ingredients.length} ingredients from "${file.name}"`);
+      } else { alert('Invalid file format.'); }
+    } catch(err){ alert('Parse error: '+err.message); }
+  };
+  reader.readAsText(file); event.target.value='';
+}
+
+renderTable();
+updateDefaults();
+renderPelletTable();
+
+// On load, check for embedded default library and apply it
+(function(){
+  const tag = document.getElementById('embedded-ingredients');
+  if (tag && tag.textContent.trim()) {
+    try {
+      const data = JSON.parse(tag.textContent);
+      if (Array.isArray(data) && data.length > 0) {
+        ingredients = data;
+        nextId = Math.max(...ingredients.map(i=>i.id)) + 1;
+        const defs={lys:3.5,met:1.6,thr:3.2,trp:1.1,his:2.2,npn:false,fat:2.0,pufa:1.0,adf:20,starch:20,rdp:8,udp:4,mg:0.15,na:0.03,k:0.60,s:0.15,co:0.05,cu:5.0,fe:80,mn:25,zn:30,se:0.08};
+        // Note: active is intentionally excluded from defs — preserve saved state
+        ingredients.forEach(i=>{ for(const[k,v] of Object.entries(defs)) if(i[k]===undefined) i[k]=v; if(i.active===undefined) i.active=true; });
+        renderTable();
+      }
+    } catch(e) {}
+  }
+  const ptag = document.getElementById('embedded-pellet-ingredients');
+  if (ptag && ptag.textContent.trim()) {
+    try {
+      const data = JSON.parse(ptag.textContent);
+      if (Array.isArray(data) && data.length > 0) {
+        pelletIngredients = data;
+        pelletNextId = Math.max(...pelletIngredients.map(i=>i.id)) + 1;
+        renderPelletTable();
+      }
+    } catch(e) {}
+  }
+})();
+</script>
+
+<!-- Embedded default ingredient library — updated by Save as default -->
+<script id="embedded-ingredients" type="application/json"></script>
+<!-- Embedded default pellet ingredient library — updated by Save as default -->
+<script id="embedded-pellet-ingredients" type="application/json"></script>
+
+<div style="text-align:center;padding:18px 12px 10px;font-size:10px;color:var(--text-faint);border-top:1px solid var(--border);margin-top:24px">
+  © 2026 Russell Couston — Rusty's Ration Checker &nbsp;|&nbsp;
+  Non-commercial use only &nbsp;|&nbsp;
+  <a href="https://rustysworkshop.github.io/ration-formulator" style="color:var(--text-faint)">rustysworkshop.github.io/ration-formulator</a> &nbsp;|&nbsp;
+  Not a substitute for qualified nutritional advice
+</div>
+</body>
+</html>

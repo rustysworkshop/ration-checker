@@ -1,0 +1,44 @@
+Rusty's Ration Checker — Custom Restricted License
+Copyright (c) 2026 Russell Couston
+
+PERMITTED USE
+Permission is granted, free of charge, to any person obtaining a copy
+of this software ("Rusty's Ration Checker") to:
+
+  - Use the software for personal, educational, research, or
+    non-commercial agricultural purposes;
+  - Share unmodified copies with attribution, provided this license
+    notice is retained in full;
+  - Modify the software for personal or internal use.
+
+RESTRICTIONS
+The following are expressly prohibited without prior written permission
+from the copyright holder:
+
+  - Commercial use, including use within or as part of any product,
+    service, or platform for which a fee is charged;
+  - Resale, sublicensing, or distribution of the software or any
+    derivative work as a commercial product;
+  - Incorporation into proprietary software, SaaS platforms, or
+    paid consulting deliverables;
+  - Removal or alteration of this license notice or copyright
+    attribution from any copy or derivative work.
+
+ATTRIBUTION
+Any permitted use, sharing, or adaptation must retain the following
+notice visibly:
+
+  "Rusty's Ration Checker by Russell Couston
+   https://rustysworkshop.github.io/ration-formulator"
+
+DISCLAIMER
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR NUTRITIONAL
+ACCURACY. THE AUTHOR ACCEPTS NO LIABILITY FOR DECISIONS MADE ON
+THE BASIS OF OUTPUTS FROM THIS SOFTWARE. ALWAYS VERIFY RATION
+FORMULATIONS WITH A QUALIFIED ANIMAL NUTRITIONIST.
+
+CONTACT
+For commercial licensing enquiries, contact the copyright holder
+via the GitHub repository listed above.
